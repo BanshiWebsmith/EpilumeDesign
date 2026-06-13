@@ -1,193 +1,795 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Epilume - Select View</title>
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cardiovascular Knowledge Base</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-    :root {
-        --bg-body: #f3f4f6;
-        --bg-surface: #ffffff;
-        --text-primary: #111827;
-        --text-secondary: #6b7280;
-        --purple-50: #faf5ff;
-        --purple-100: #f3e8ff;
-        --purple-200: #e9d5ff;
-        --purple-500: #a855f7;
-        --purple-600: #9333ea;
-        --purple-700: #7e22ce;
-        --radius-xl: 24px;
-        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    }
+        :root {
+            /* Core UI Colors */
+            --bg-body: #f3f4f6;
+            --bg-surface: #ffffff;
+            --bg-hover: #f9fafb;
+            --text-primary: #111827;
+            --text-secondary: #6b7280;
+            --border-color: #e5e7eb;
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+            /* Unified Purple Palette */
+            --purple-50: #faf5ff;
+            --purple-100: #f3e8ff;
+            --purple-200: #e9d5ff;
+            --purple-500: #a855f7;
+            --purple-600: #9333ea;
+            --purple-700: #7e22ce;
 
-    body {
-        font-family: 'Inter', sans-serif;
-        background-color: var(--bg-body);
-        color: var(--text-primary);
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        padding: 40px;
-        background: radial-gradient(circle at top, var(--purple-100) 0%, var(--bg-body) 60%);
-    }
+            /* Layout Variables */
+            --radius-lg: 16px;
+            --radius-md: 12px;
+            --radius-sm: 8px;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
 
-    .header {
-        text-align: center;
-        margin-bottom: 60px;
-    }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
-    .header h1 {
-        font-size: 48px;
-        font-weight: 800;
-        letter-spacing: -0.03em;
-        color: var(--text-primary);
-        margin-bottom: 16px;
-    }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
 
-    .header h1 span {
-        color: var(--purple-600);
-    }
+        /* --- LAYOUT --- */
+        .app-container {
+            display: grid;
+            grid-template-columns: 280px 350px 1fr;
+            gap: 20px;
+            width: 100%;
+            max-width: 1400px;
+            height: 90vh;
+            min-height: 700px;
+        }
 
-    .header p {
-        font-size: 18px;
-        color: var(--text-secondary);
-        max-width: 500px;
-        margin: 0 auto;
-        line-height: 1.6;
-    }
+        .panel {
+            background: var(--bg-surface);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
 
-    .options-container {
-        display: flex;
-        gap: 32px;
-        max-width: 1000px;
-        width: 100%;
-        justify-content: center;
-        flex-wrap: wrap;
-    }
+        .panel-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+        }
 
-    .option-card {
-        background: var(--bg-surface);
-        border-radius: var(--radius-xl);
-        padding: 40px;
-        width: 100%;
-        max-width: 400px;
-        text-decoration: none;
-        color: inherit;
-        border: 1px solid rgba(229, 231, 235, 0.5);
-        box-shadow: var(--shadow-lg);
-        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-        position: relative;
-        overflow: hidden;
-    }
+        .panel-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
 
-    .option-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 6px;
-        background: linear-gradient(to right, var(--purple-500), var(--purple-700));
-        transform: scaleX(0);
-        transition: transform 0.4s ease;
-        transform-origin: left;
-    }
+        /* --- COLUMN 1: SIDEBAR --- */
+        .category-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
 
-    .option-card:hover {
-        transform: translateY(-10px);
-        box-shadow: var(--shadow-xl);
-        border-color: var(--purple-200);
-    }
+        .category-item {
+            padding: 16px;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.2s ease;
+        }
 
-    .option-card:hover::before {
-        transform: scaleX(1);
-    }
+        .category-item:hover {
+            background-color: var(--bg-hover);
+        }
 
-    .icon-wrapper {
-        width: 80px;
-        height: 80px;
-        border-radius: 50%;
-        background: var(--purple-50);
-        color: var(--purple-600);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        margin-bottom: 24px;
-        transition: all 0.3s ease;
-    }
+        .category-item.active {
+            background-color: var(--purple-50);
+            border-color: var(--purple-200);
+        }
 
-    .option-card:hover .icon-wrapper {
-        background: var(--purple-600);
-        color: #ffffff;
-        transform: scale(1.1);
-    }
+        .category-item h3 {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: var(--text-primary);
+        }
 
-    .option-card h2 {
-        font-size: 24px;
-        font-weight: 700;
-        margin-bottom: 12px;
-        color: var(--text-primary);
-    }
+        .category-item.active h3 {
+            color: var(--purple-700);
+        }
 
-    .option-card p {
-        font-size: 15px;
-        color: var(--text-secondary);
-        line-height: 1.6;
-    }
-</style>
+        .category-item p {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        /* --- COLUMN 2: HIERARCHY TREE --- */
+        .search-input {
+            width: 100%;
+            padding: 10px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .search-input:focus {
+            border-color: var(--purple-500);
+        }
+
+        .tree-node {
+            margin-bottom: 16px;
+        }
+
+        .folder-title {
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 12px;
+            background: var(--bg-hover);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+        }
+
+        .folder-icon {
+            color: var(--purple-500);
+            display: flex;
+            align-items: center;
+        }
+
+        .disease-list {
+            list-style: none;
+            margin-left: 21px;
+            padding-left: 0;
+            border-left: 2px solid var(--purple-100);
+            margin-top: 4px;
+        }
+
+        .disease-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px 10px 24px;
+            margin: 4px 0;
+            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        /* Hierarchy L-branch connection */
+        .disease-item::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 50%;
+            width: 14px;
+            height: 2px;
+            background-color: var(--purple-100);
+            transition: background-color 0.2s;
+        }
+
+        .disease-item:hover {
+            background-color: var(--bg-hover);
+        }
+
+        .disease-item.active {
+            background-color: var(--purple-50);
+        }
+
+        .disease-item.active::before {
+            background-color: var(--purple-500);
+        }
+
+        .item-name-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .item-arrow {
+            width: 14px;
+            height: 14px;
+            color: var(--text-secondary);
+            transition: transform 0.2s, color 0.2s;
+        }
+
+        .disease-item.active .item-arrow {
+            color: var(--purple-600);
+            transform: translateX(3px);
+        }
+
+        .disease-item.active .item-name-wrapper {
+            color: var(--purple-700);
+        }
+
+        .stat-badge {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 12px;
+            background: var(--purple-50);
+            color: var(--purple-700);
+        }
+
+        /* =========================================
+       COLUMN 3: UNIFIED PURPLE DETAIL PANEL
+       ========================================= */
+        #detail-view {
+            display: none;
+            padding: 40px;
+            position: relative;
+        }
+
+        /* Decorative subtle background element */
+        #detail-view::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, var(--purple-50) 0%, transparent 70%);
+            opacity: 0.8;
+            z-index: 0;
+            pointer-events: none;
+            border-top-right-radius: var(--radius-lg);
+        }
+
+        .detail-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .detail-top-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .ref-id {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .status-tag-premium {
+            background: var(--purple-100);
+            color: var(--purple-700);
+            padding: 6px 16px;
+            border-radius: 30px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            border: 1px solid var(--purple-200);
+        }
+
+        .detail-header {
+            margin-bottom: 40px;
+        }
+
+        .detail-title {
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            letter-spacing: -0.02em;
+            line-height: 1.1;
+        }
+
+        .detail-subtitle {
+            font-size: 16px;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        /* Unified Soft UI Metrics Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .metric-card-soft {
+            background: #f8fafc;
+            border-radius: var(--radius-md);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            border-left: 4px solid var(--purple-500);
+            background: linear-gradient(to right, var(--purple-50) 0%, #f8fafc 20%);
+        }
+
+        .metric-card-soft:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .metric-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .metric-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--purple-700);
+        }
+
+        .metric-value.text-md {
+            font-size: 18px;
+        }
+
+        /* Elegant Description Box */
+        .description-box {
+            border-top: 1px solid var(--border-color);
+            padding-top: 30px;
+        }
+
+        .description-box h4 {
+            font-size: 12px;
+            margin-bottom: 16px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--purple-600);
+        }
+
+        .description-box p {
+            font-size: 16px;
+            color: #4b5563;
+            line-height: 1.8;
+            font-weight: 300;
+        }
+
+        /* Premium Empty State */
+        #empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            text-align: center;
+        }
+
+        .empty-icon-wrapper {
+            background: var(--purple-100);
+            color: var(--purple-600);
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 24px;
+            box-shadow: 0 0 0 8px rgba(168, 85, 247, 0.05);
+        }
+
+        .empty-state-text h3 {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .empty-state-text p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            max-width: 250px;
+            line-height: 1.5;
+        }
+    </style>
 </head>
+
 <body>
 
-    <div class="header">
-        <h1>Welcome to <span>Epilume</span></h1>
-        <p>Select a view to explore the Cardiovascular Knowledge Base and navigate disease hierarchies.</p>
+    <div class="app-container">
+
+        <div class="panel">
+            <div class="panel-header">
+                <h2 style="font-size: 16px; font-weight: 600;">Main Categories</h2>
+                <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">Select a cardiovascular
+                    family</p>
+            </div>
+            <div class="panel-body" style="padding: 12px;">
+                <ul class="category-list" id="category-list">
+                </ul>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">
+                <input type="text" class="search-input" placeholder="Search disease..." id="search-bar">
+            </div>
+            <div class="panel-body" id="hierarchy-container">
+            </div>
+        </div>
+
+        <div class="panel" style="background: #ffffff;">
+            <div class="panel-body" id="detail-view">
+                <div class="detail-content">
+
+                    <div class="detail-top-meta">
+                        <div class="ref-id" id="det-ref">REF: ---</div>
+                        <div class="status-tag-premium" id="det-status">Published</div>
+                    </div>
+
+                    <div class="detail-header">
+                        <h1 class="detail-title" id="det-title">Disease Name</h1>
+                        <div class="detail-subtitle">Clinical Disease Profile</div>
+                    </div>
+
+                    <div class="metrics-grid">
+                        <div class="metric-card-soft">
+                            <div class="metric-label">Prevalence</div>
+                            <div class="metric-value" id="det-prev">0.0%</div>
+                        </div>
+                        <div class="metric-card-soft">
+                            <div class="metric-label">Data Year</div>
+                            <div class="metric-value" id="det-year">YYYY</div>
+                        </div>
+                        <div class="metric-card-soft">
+                            <div class="metric-label">Family Category</div>
+                            <div class="metric-value text-md" id="det-cat">Category</div>
+                        </div>
+                        <div class="metric-card-soft">
+                            <div class="metric-label">Review Status</div>
+                            <div class="metric-value text-md">Completed</div>
+                        </div>
+                    </div>
+
+                    <div class="description-box">
+                        <h4>Clinical Description</h4>
+                        <p id="det-desc">Description text will appear here.</p>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="panel-body" id="empty-state">
+                <div class="empty-icon-wrapper">
+                    <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                        </path>
+                    </svg>
+                </div>
+                <div class="empty-state-text">
+                    <h3>No Profile Selected</h3>
+                    <p>Select a specific condition from the hierarchy tree to view its clinical data.</p>
+                </div>
+            </div>
+        </div>
+
     </div>
 
-    <div class="options-container">
-        <!-- Option 1 -->
-        <a href="dashboard.html" class="option-card">
-            <div class="icon-wrapper">
-                <svg width="36" height="36" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
-                </svg>
-            </div>
-            <h2>Clinical Dashboard</h2>
-            <p>Interactive 3-column dashboard detailing clinical disease profiles, metrics, and descriptions.</p>
-        </a>
+    <script>
+        // 1. Unified Data Store
+        const database = [
+            {
+                id: 'cad',
+                name: 'Coronary Artery Disease',
+                diseaseCount: 9,
+                folders: [
+                    {
+                        name: 'Obstructive CAD',
+                        subfolders: [
+                            {
+                                name: 'Stable Ischemic Heart Disease',
+                                items: [
+                                    { id: 'CAD-101', name: 'Stable Angina', value: '1.5% - 1.7%', year: '2023', status: 'Published', desc: 'A type of chest pain caused by reduced blood flow to the heart, typically occurring with exertion or emotional stress. It follows a predictable pattern.' },
+                                    { id: 'CAD-102', name: 'Refractory Angina', value: '5% - 15%', year: '2016', status: 'Published', desc: 'Severe chest pain due to ischemia that cannot be controlled by optimal medical therapy, angioplasty, or bypass surgery.' }
+                                ]
+                            },
+                            {
+                                name: 'Acute Coronary Syndrome',
+                                items: [
+                                    { id: 'CAD-103', name: 'NSTEMI', value: '35% - 65%', year: '2024', status: 'In Review', desc: 'Non-ST-segment elevation myocardial infarction. A type of heart attack where there is no ST-segment elevation on an ECG, but blood tests show heart damage.' },
+                                    { id: 'CAD-104', name: 'STEMI', value: '30%', year: '2024', status: 'Published', desc: 'ST-elevation myocardial infarction. A highly severe type of heart attack caused by a complete blockage of a major coronary artery.' },
+                                    { id: 'CAD-ACS1', name: 'Microvascular Angina (Small Vessel Disease)', value: 'NA', year: 'N/A', status: 'Draft', desc: 'Chest pain caused by abnormalities in the tiny blood vessels of the heart.' },
+                                    { id: 'CAD-ACS2', name: 'Vasospastic Angina (Variant Angina)', value: 'NA', year: 'N/A', status: 'Published', desc: 'Chest pain caused by a sudden spasm in a coronary artery.' },
+                                    { id: 'CAD-ACS3', name: 'Endothelial Dysfunction', value: 'NA', year: 'N/A', status: 'Draft', desc: 'Endothelial dysfunction in coronary arteries.' },
+                                    { id: 'CAD-ACS4', name: 'Myocardial Bridging', value: 'NA', year: 'N/A', status: 'Draft', desc: 'A band of heart muscle that lies on top of a coronary artery.' }
+                                ]
+                            }
+                        ],
+                        items: []
+                    },
+                    {
+                        name: 'Silent Ischemia',
+                        items: [
+                            { id: 'CAD-201', name: 'Silent Myocardial Ischemia', value: '2% - 4%', year: '2024', status: 'Published', desc: 'Objective evidence of myocardial ischemia (restriction in blood supply to the heart) in the absence of chest discomfort or other typical symptoms.' }
+                        ]
+                    },
+                    {
+                        name: 'Non-Obstructive CAD',
+                        items: [
+                            { id: 'CAD-301', name: 'Microvascular Angina (Small Vessel Disease)', value: '10% - 30%', year: '2023', status: 'Draft', desc: 'Chest pain caused by abnormalities and dysfunction in the tiny blood vessels (microcirculation) of the heart, rather than the main arteries.' },
+                            { id: 'CAD-302', name: 'Vasospastic Angina (Variant Angina)', value: 'NA', year: 'N/A', status: 'Published', desc: 'Chest pain caused by a sudden, temporary spasm in a coronary artery that restricts blood flow. Often occurs at rest.' },
+                            { id: 'CAD-303', name: 'Endothelial Dysfunction', value: 'NA', year: 'N/A', status: 'Draft', desc: 'Endothelial dysfunction in coronary arteries.' },
+                            { id: 'CAD-304', name: 'Myocardial Bridging', value: 'NA', year: 'N/A', status: 'Draft', desc: 'A band of heart muscle that lies on top of a coronary artery.' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'sd',
+                name: 'Septal Defects',
+                diseaseCount: 6,
+                folders: [
+                    {
+                        name: 'Atrial Septal Defect',
+                        items: [
+                            { id: 'SD-101', name: 'Secundum ASD', value: '75%', year: '2025', status: 'Published', desc: 'The most common type of atrial septal defect, located in the middle of the atrial septum (the wall separating the upper chambers of the heart).' },
+                            { id: 'SD-102', name: 'Primum ASD', value: '10%', year: '2025', status: 'Published', desc: 'A defect in the lower part of the atrial septum, often associated with other structural heart defects, particularly affecting the atrioventricular valves.' }
+                        ]
+                    },
+                    {
+                        name: 'Ventricular Septal Defect',
+                        items: [
+                            { id: 'SD-201', name: 'Perimembranous VSD', value: '80%', year: '2024', status: 'Published', desc: 'A hole in the upper section of the ventricular septum, near the aortic and tricuspid valves.' },
+                            { id: 'SD-202', name: 'Muscular VSD', value: '20%', year: '2024', status: 'In Review', desc: 'A hole located in the lower, muscular part of the ventricular septum. Some may close on their own during childhood.' }
+                        ]
+                    },
+                    {
+                        name: 'Atrioventricular Septal Defect',
+                        items: [
+                            { id: 'SD-301', name: 'Complete AVSD', value: '0.3% - 0.5%', year: '2021', status: 'Published', desc: 'A severe congenital heart defect involving a large hole in the center of the heart, affecting all four chambers where they would normally be divided.' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'vte',
+                name: 'Venous Thromboembolism',
+                diseaseCount: 4,
+                folders: [
+                    {
+                        name: 'Deep Vein Thrombosis',
+                        items: [
+                            { id: 'VTE-101', name: 'Deep Vein Thrombosis', value: 'NA', year: 'N/A', status: 'Draft', desc: 'A medical condition that occurs when a blood clot forms in a deep vein, usually in the lower leg, thigh, or pelvis.' }
+                        ]
+                    },
+                    {
+                        name: 'Pulmonary Embolism',
+                        items: [
+                            { id: 'VTE-201', name: 'Massive/High-Risk PE', value: '5%', year: '2022', status: 'Published', desc: 'A severe pulmonary embolism that causes sustained low blood pressure (hypotension) or cardiogenic shock, requiring immediate intervention.' },
+                            { id: 'VTE-202', name: 'Submassive PE', value: '40%', year: 'N/A', status: 'Published', desc: 'A pulmonary embolism that causes right heart strain or myocardial necrosis without inducing dangerously low blood pressure.' },
+                            { id: 'VTE-203', name: 'Low Risk PE', value: '40% - 60%', year: '2022', status: 'Published', desc: 'A pulmonary embolism that does not cause signs of heart strain, right ventricular dysfunction, or low blood pressure.' }
+                        ]
+                    }
+                ]
+            }
+        ];
 
-        <!-- Option 2 -->
-        <a href="tree_view.html" class="option-card">
-            <div class="icon-wrapper">
-                <svg width="36" height="36" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
-                </svg>
-            </div>
-            <h2>Hierarchy Tree</h2>
-            <p>A full-screen, interactive visual organizational chart mapping cardiovascular families.</p>
-        </a>
+        // 2. State Variables
+        let currentCategory = database[0];
 
-        <!-- Option 3 -->
-        <a href="card_view.html" class="option-card">
-            <div class="icon-wrapper">
-                <svg width="36" height="36" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
-                </svg>
-            </div>
-            <h2>Card Drill-Down</h2>
-            <p>An immersive grid-based dashboard for easy step-by-step navigation through diseases.</p>
-        </a>
-    </div>
+        // 3. DOM Elements
+        const catListEl = document.getElementById('category-list');
+        const hierarchyEl = document.getElementById('hierarchy-container');
+        const detailViewEl = document.getElementById('detail-view');
+        const emptyStateEl = document.getElementById('empty-state');
+        const searchInput = document.getElementById('search-bar');
+
+        // 4. Initialization
+        function init() {
+            renderCategories();
+            renderHierarchy(currentCategory);
+            setupSearch();
+        }
+
+        // 5. Render Sidebar Categories
+        function renderCategories() {
+            catListEl.innerHTML = '';
+            database.forEach(cat => {
+                const li = document.createElement('li');
+                li.className = `category-item ${cat.id === currentCategory.id ? 'active' : ''}`;
+                li.innerHTML = `
+                <h3>${cat.name}</h3>
+                <p>${cat.diseaseCount} diseases</p>
+            `;
+                li.onclick = () => {
+                    currentCategory = cat;
+                    renderCategories();
+                    renderHierarchy(cat);
+                    hideDetail();
+                    searchInput.value = ''; // Reset search on category change
+                };
+                catListEl.appendChild(li);
+            });
+        }
+
+        // 6. Render Middle Column Hierarchy
+        function renderHierarchy(category, searchTerm = '') {
+            hierarchyEl.innerHTML = '';
+            let hasResults = false;
+
+            category.folders.forEach(folder => {
+                let folderContentHTML = '';
+                let folderHasResults = false;
+
+                // Render subfolders if they exist
+                if (folder.subfolders) {
+                    folder.subfolders.forEach(sub => {
+                        const filteredSubItems = sub.items.filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()));
+                        if (filteredSubItems.length > 0) {
+                            folderHasResults = true;
+                            hasResults = true;
+
+                            let subListHTML = `
+                            <div class="subfolder-node" style="margin-top: 8px;">
+                                <div class="subfolder-title" style="font-size: 13px; font-weight: 600; padding: 6px 12px 6px 24px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+                                    ${sub.name}
+                                </div>
+                                <ul class="disease-list" style="margin-left: 28px; border-left: 2px solid var(--border-color);">
+                        `;
+                            filteredSubItems.forEach(item => {
+                                subListHTML += `
+                                <li class="disease-item" 
+                                    data-id="${item.id}"
+                                    data-name="${item.name}" 
+                                    data-val="${item.value}" 
+                                    data-year="${item.year}" 
+                                    data-status="${item.status}"
+                                    data-desc="${item.desc}">
+                                    <div class="item-name-wrapper">
+                                        <svg class="item-arrow" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path>
+                                        </svg>
+                                        <span>${item.name}</span>
+                                    </div>
+                                    <span class="stat-badge">${item.value}</span>
+                                </li>
+                            `;
+                            });
+                            subListHTML += `</ul></div>`;
+                            folderContentHTML += subListHTML;
+                        }
+                    });
+                }
+
+                // Render direct items
+                const filteredItems = folder.items ? folder.items.filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase())) : [];
+                if (filteredItems.length > 0) {
+                    folderHasResults = true;
+                    hasResults = true;
+                    let listHTML = `<ul class="disease-list">`;
+                    filteredItems.forEach(item => {
+                        listHTML += `
+                        <li class="disease-item" 
+                            data-id="${item.id}"
+                            data-name="${item.name}" 
+                            data-val="${item.value}" 
+                            data-year="${item.year}" 
+                            data-status="${item.status}"
+                            data-desc="${item.desc}">
+                            <div class="item-name-wrapper">
+                                <svg class="item-arrow" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path>
+                                </svg>
+                                <span>${item.name}</span>
+                            </div>
+                            <span class="stat-badge">${item.value}</span>
+                        </li>
+                    `;
+                    });
+                    listHTML += `</ul>`;
+                    folderContentHTML += listHTML;
+                }
+
+                if (folderHasResults) {
+                    const folderDiv = document.createElement('div');
+                    folderDiv.className = 'tree-node';
+                    folderDiv.innerHTML = `
+                    <div class="folder-title">
+                        <span class="folder-icon">
+                            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                            </svg>
+                        </span>
+                        ${folder.name}
+                    </div>
+                    ${folderContentHTML}
+                `;
+                    hierarchyEl.appendChild(folderDiv);
+                }
+            });
+
+            if (!hasResults) {
+                hierarchyEl.innerHTML = `<p style="color: var(--text-secondary); text-align: center; margin-top: 20px; font-size: 14px;">No diseases found.</p>`;
+            } else {
+                // Add click listeners to newly rendered items
+                const items = hierarchyEl.querySelectorAll('.disease-item');
+                items.forEach(item => {
+                    item.onclick = (e) => {
+                        items.forEach(i => i.classList.remove('active'));
+                        e.currentTarget.classList.add('active');
+
+                        showDetail({
+                            id: item.getAttribute('data-id'),
+                            name: item.getAttribute('data-name'),
+                            value: item.getAttribute('data-val'),
+                            year: item.getAttribute('data-year'),
+                            status: item.getAttribute('data-status'),
+                            desc: item.getAttribute('data-desc'),
+                            category: category.name
+                        });
+                    };
+                });
+            }
+        }
+
+        // 7. Search Functionality
+        function setupSearch() {
+            searchInput.addEventListener('input', (e) => {
+                renderHierarchy(currentCategory, e.target.value);
+            });
+        }
+
+        // 8. Render Right Column Detail Panel
+        function showDetail(data) {
+            document.getElementById('det-ref').textContent = `REF: ${data.id}`;
+            document.getElementById('det-title').textContent = data.name;
+            document.getElementById('det-prev').textContent = data.value;
+            document.getElementById('det-year').textContent = data.year;
+            document.getElementById('det-status').textContent = data.status;
+            document.getElementById('det-cat').textContent = data.category;
+            document.getElementById('det-desc').textContent = data.desc;
+
+            emptyStateEl.style.display = 'none';
+            detailViewEl.style.display = 'block';
+        }
+
+        function hideDetail() {
+            emptyStateEl.style.display = 'flex';
+            detailViewEl.style.display = 'none';
+        }
+
+        // Start App
+        init();
+    </script>
 
 </body>
+
 </html>
