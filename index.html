@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Epilume - Select View</title>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+    :root {
+        --bg-body: #f3f4f6;
+        --bg-surface: #ffffff;
+        --text-primary: #111827;
+        --text-secondary: #6b7280;
+        --purple-50: #faf5ff;
+        --purple-100: #f3e8ff;
+        --purple-200: #e9d5ff;
+        --purple-500: #a855f7;
+        --purple-600: #9333ea;
+        --purple-700: #7e22ce;
+        --radius-xl: 24px;
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+        font-family: 'Inter', sans-serif;
+        background-color: var(--bg-body);
+        color: var(--text-primary);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 40px;
+        background: radial-gradient(circle at top, var(--purple-100) 0%, var(--bg-body) 60%);
+    }
+
+    .header {
+        text-align: center;
+        margin-bottom: 60px;
+    }
+
+    .header h1 {
+        font-size: 48px;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        color: var(--text-primary);
+        margin-bottom: 16px;
+    }
+
+    .header h1 span {
+        color: var(--purple-600);
+    }
+
+    .header p {
+        font-size: 18px;
+        color: var(--text-secondary);
+        max-width: 500px;
+        margin: 0 auto;
+        line-height: 1.6;
+    }
+
+    .options-container {
+        display: flex;
+        gap: 32px;
+        max-width: 1000px;
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .option-card {
+        background: var(--bg-surface);
+        border-radius: var(--radius-xl);
+        padding: 40px;
+        width: 100%;
+        max-width: 400px;
+        text-decoration: none;
+        color: inherit;
+        border: 1px solid rgba(229, 231, 235, 0.5);
+        box-shadow: var(--shadow-lg);
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .option-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 6px;
+        background: linear-gradient(to right, var(--purple-500), var(--purple-700));
+        transform: scaleX(0);
+        transition: transform 0.4s ease;
+        transform-origin: left;
+    }
+
+    .option-card:hover {
+        transform: translateY(-10px);
+        box-shadow: var(--shadow-xl);
+        border-color: var(--purple-200);
+    }
+
+    .option-card:hover::before {
+        transform: scaleX(1);
+    }
+
+    .icon-wrapper {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: var(--purple-50);
+        color: var(--purple-600);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-bottom: 24px;
+        transition: all 0.3s ease;
+    }
+
+    .option-card:hover .icon-wrapper {
+        background: var(--purple-600);
+        color: #ffffff;
+        transform: scale(1.1);
+    }
+
+    .option-card h2 {
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 12px;
+        color: var(--text-primary);
+    }
+
+    .option-card p {
+        font-size: 15px;
+        color: var(--text-secondary);
+        line-height: 1.6;
+    }
+</style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Welcome to <span>Epilume</span></h1>
+        <p>Select a view to explore the Cardiovascular Knowledge Base and navigate disease hierarchies.</p>
+    </div>
+
+    <div class="options-container">
+        <!-- Option 1 -->
+        <a href="dashboard.html" class="option-card">
+            <div class="icon-wrapper">
+                <svg width="36" height="36" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+                </svg>
+            </div>
+            <h2>Clinical Dashboard</h2>
+            <p>Interactive 3-column dashboard detailing clinical disease profiles, metrics, and descriptions.</p>
+        </a>
+
+        <!-- Option 2 -->
+        <a href="tree_view.html" class="option-card">
+            <div class="icon-wrapper">
+                <svg width="36" height="36" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                </svg>
+            </div>
+            <h2>Hierarchy Tree</h2>
+            <p>A full-screen, interactive visual organizational chart mapping cardiovascular families.</p>
+        </a>
+
+        <!-- Option 3 -->
+        <a href="card_view.html" class="option-card">
+            <div class="icon-wrapper">
+                <svg width="36" height="36" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+                </svg>
+            </div>
+            <h2>Card Drill-Down</h2>
+            <p>An immersive grid-based dashboard for easy step-by-step navigation through diseases.</p>
+        </a>
+    </div>
+
+</body>
+</html>
