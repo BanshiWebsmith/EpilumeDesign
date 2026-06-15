@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EpiLume — Oncology Constellation View</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #F8F9FC;
+    --surface: #FFFFFF;
+    --surface-2: #F2F4F8;
+    --border: #E4E8F0;
+    --border-light: #EEF1F7;
+    --text-primary: #0F1629;
+    --text-secondary: #5A6480;
+    --text-muted: #9BA4BA;
+    --accent: #6C3FC5;
+    --accent-light: #EDE8FB;
+    --accent-mid: #8B5CF6;
+    --green: #059669;
+    --green-light: #D1FAE5;
+    --amber: #D97706;
+    --amber-light: #FEF3C7;
+    --red: #DC2626;
+    --red-light: #FEE2E2;
+    --connector: #C7D0E8;
+    --node-glow: rgba(108,63,197,0.12);
+    --shadow-sm: 0 1px 3px rgba(15,22,41,0.06), 0 1px 2px rgba(15,22,41,0.04);
+    --shadow-md: 0 4px 16px rgba(15,22,41,0.08), 0 2px 4px rgba(15,22,41,0.04);
+    --shadow-lg: 0 12px 40px rgba(15,22,41,0.12), 0 4px 8px rgba(15,22,41,0.06);
+    --shadow-xl: 0 24px 64px rgba(108,63,197,0.18), 0 8px 24px rgba(15,22,41,0.1);
+    --radius: 16px;
+    --radius-sm: 10px;
+    --radius-xs: 6px;
+    --font: 'Inter', sans-serif;
+    --mono: 'DM Mono', monospace;
+  }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Header ── */
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(248,249,252,0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border-light);
+    padding: 0 40px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .header-left { display: flex; align-items: center; gap: 16px; }
+
+  .logo-mark {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, #6C3FC5, #8B5CF6);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .logo-mark svg { width: 18px; height: 18px; }
+
+  .app-title {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--text-primary);
+    text-decoration: none;
+  }
+  .app-subtitle {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 400;
+    letter-spacing: 0.02em;
+  }
+
+  .header-right { display: flex; align-items: center; gap: 12px; }
+
+  .select-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .select-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-right: 10px;
+  }
+  .cancer-select {
+    appearance: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 36px 8px 14px;
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+    cursor: pointer;
+    outline: none;
+    min-width: 180px;
+    box-shadow: var(--shadow-sm);
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .cancer-select:hover { border-color: var(--accent); }
+  .cancer-select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
+  .select-chevron {
+    position: absolute;
+    right: 11px;
+    pointer-events: none;
+    color: var(--text-muted);
+  }
+
+  /* ── Layout ── */
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    min-height: calc(100vh - 64px);
+  }
+
+  /* ── Canvas ── */
+  .canvas-area {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    overflow: hidden;
+  }
+
+  .canvas-bg-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      radial-gradient(circle at 50% 50%, rgba(108,63,197,0.04) 0%, transparent 60%),
+      linear-gradient(var(--border-light) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border-light) 1px, transparent 1px);
+    background-size: 100% 100%, 32px 32px, 32px 32px;
+    pointer-events: none;
+  }
+
+  /* ── Constellation SVG ── */
+  #constellation { position: relative; z-index: 1; }
+
+  /* ── Center Node ── */
+  .center-node {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+  }
+
+  .center-card {
+    background: var(--surface);
+    border: 2px solid var(--accent);
+    border-radius: 20px;
+    padding: 22px 26px;
+    width: 220px;
+    box-shadow: var(--shadow-xl);
+    cursor: pointer;
+    transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+  .center-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--accent-light) 0%, transparent 60%);
+    border-radius: 18px;
+    opacity: 0.5;
+    pointer-events: none;
+  }
+  .center-card:hover { transform: scale(1.03); box-shadow: var(--shadow-xl); }
+
+  .center-batch {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    margin-bottom: 4px;
+    opacity: 0.8;
+  }
+  .center-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+    margin-bottom: 14px;
+  }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .stat-cell {
+    background: var(--surface-2);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-xs);
+    padding: 8px 10px;
+  }
+  .stat-label {
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 3px;
+  }
+  .stat-value {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.3;
+  }
+  .stat-year {
+    font-size: 9px;
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+  .center-footer {
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .last-run-text {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-family: var(--mono);
+  }
+
+  /* ── Status Badge ── */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .badge-completed { background: var(--green-light); color: var(--green); }
+  .badge-review { background: var(--amber-light); color: var(--amber); }
+  .badge-processing { background: var(--surface-2); color: var(--text-muted); }
+  .badge-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+
+  /* ── Orbit Nodes ── */
+  .orbit-node {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    z-index: 8;
+  }
+  .orbit-node:hover { z-index: 20; }
+  .orbit-node:hover .orbit-card { transform: scale(1.06); box-shadow: var(--shadow-lg); border-color: var(--accent); }
+  .orbit-node.active .orbit-card { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light), var(--shadow-md); }
+
+  .orbit-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    width: 164px;
+    box-shadow: var(--shadow-md);
+    transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
+    position: relative;
+    overflow: hidden;
+  }
+  .orbit-card::after {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--accent);
+    border-radius: 3px 0 0 3px;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .orbit-node.active .orbit-card::after,
+  .orbit-node:hover .orbit-card::after { opacity: 1; }
+
+  .orbit-batch {
+    font-family: var(--mono);
+    font-size: 8.5px;
+    color: var(--accent);
+    letter-spacing: 0.07em;
+    opacity: 0.7;
+    margin-bottom: 2px;
+  }
+  .orbit-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.35;
+    margin-bottom: 2px;
+    letter-spacing: -0.01em;
+  }
+  .orbit-parent {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+  .subtype-block {
+    background: var(--accent-light);
+    border-radius: var(--radius-xs);
+    padding: 8px 10px;
+    text-align: center;
+    margin-bottom: 8px;
+  }
+  .subtype-label-sm {
+    font-size: 8px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    margin-bottom: 2px;
+  }
+  .subtype-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  .orbit-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .run-date {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-muted);
+  }
+
+  /* ── Level-2 Satellite Nodes ── */
+  .satellite-node {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    z-index: 6;
+    transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .satellite-node:hover { z-index: 18; }
+  .satellite-node:hover .satellite-card { transform: scale(1.06); box-shadow: var(--shadow-md); border-color: #8B5CF6; }
+  .satellite-node.active .satellite-card { border-color: #8B5CF6; box-shadow: 0 0 0 3px rgba(139,92,246,0.15), var(--shadow-sm); }
+
+  .satellite-card {
+    background: var(--surface);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    width: 140px;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
+    position: relative;
+    overflow: hidden;
+  }
+  .satellite-card::after {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 2px;
+    background: #8B5CF6;
+    border-radius: 2px 0 0 0 2px;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .satellite-node.active .satellite-card::after,
+  .satellite-node:hover .satellite-card::after { opacity: 1; }
+
+  .satellite-batch {
+    font-family: var(--mono);
+    font-size: 8px;
+    color: #8B5CF6;
+    letter-spacing: 0.07em;
+    opacity: 0.6;
+    margin-bottom: 2px;
+  }
+  .satellite-name {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.3;
+    margin-bottom: 2px;
+  }
+  .satellite-parent-label {
+    font-size: 9px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+  .satellite-value-block {
+    background: #F5F0FF;
+    border-radius: 6px;
+    padding: 6px 8px;
+    text-align: center;
+    margin-bottom: 6px;
+  }
+  .satellite-value {
+    font-size: 14px;
+    font-weight: 700;
+    color: #6C3FC5;
+    line-height: 1;
+  }
+  .satellite-run {
+    font-family: var(--mono);
+    font-size: 8px;
+    color: var(--text-muted);
+  }
+
+  /* ── Right Panel ── */
+  .detail-panel {
+    border-left: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 24px 28px 20px;
+    border-bottom: 1px solid var(--border-light);
+    flex-shrink: 0;
+  }
+  .panel-eyebrow {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .panel-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.03em;
+    line-height: 1.2;
+    margin-bottom: 6px;
+  }
+  .panel-meta {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .panel-batch {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  .panel-body { flex: 1; overflow-y: auto; padding: 20px 28px; }
+  .panel-body::-webkit-scrollbar { width: 4px; }
+  .panel-body::-webkit-scrollbar-track { background: transparent; }
+  .panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .panel-section { margin-bottom: 24px; }
+  .panel-section-title {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .stat-row-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .stat-card-lg {
+    background: var(--surface-2);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card-lg::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-mid));
+    opacity: 0.5;
+  }
+  .stat-card-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+  .stat-card-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.03em;
+    line-height: 1;
+    margin-bottom: 2px;
+  }
+  .stat-card-year {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+  .review-value {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--amber);
+  }
+
+  /* Subtype percentage bar */
+  .subtype-pct-section { margin-bottom: 10px; }
+  .subtype-pct-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 5px;
+  }
+  .subtype-pct-label { font-size: 11px; font-weight: 500; color: var(--text-secondary); }
+  .subtype-pct-value { font-size: 12px; font-weight: 700; color: var(--accent); }
+  .pct-track {
+    height: 4px;
+    background: var(--surface-2);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .pct-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-mid));
+    border-radius: 4px;
+    transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  /* Children list */
+  .children-list { display: flex; flex-direction: column; gap: 8px; }
+  .child-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 14px;
+    background: var(--surface-2);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .child-item:hover { border-color: var(--accent); background: var(--accent-light); }
+  .child-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex-shrink: 0; opacity: 0.5; }
+  .child-name { font-size: 12px; font-weight: 500; color: var(--text-primary); flex: 1; }
+  .child-pct { font-size: 12px; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+
+  .panel-footer {
+    flex-shrink: 0;
+    padding: 16px 28px;
+    border-top: 1px solid var(--border-light);
+    display: flex;
+    gap: 10px;
+  }
+  .btn {
+    flex: 1;
+    padding: 10px 16px;
+    border-radius: var(--radius-sm);
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+    letter-spacing: -0.01em;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #5a34a8; }
+  .btn-secondary { background: var(--surface-2); color: var(--text-secondary); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: var(--border-light); color: var(--text-primary); }
+  .btn-review { background: var(--amber-light); color: var(--amber); border: 1px solid #FCD34D; }
+  .btn-review:hover { background: #FDE68A; }
+
+  /* ── Connector lines in SVG ── */
+  .connector { stroke: var(--connector); stroke-width: 1.5; fill: none; stroke-dasharray: 4 3; }
+  .connector-solid { stroke: var(--connector); stroke-width: 1.5; fill: none; stroke-dasharray: none; }
+
+  /* ── Legend strip ── */
+  .legend {
+    position: absolute;
+    bottom: 24px;
+    left: 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 30px;
+    padding: 8px 18px;
+    box-shadow: var(--shadow-sm);
+    z-index: 20;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-badge { width: 8px; height: 8px; border-radius: 50%; }
+  .legend-label { font-size: 11px; color: var(--text-secondary); font-weight: 400; }
+
+  /* ── Record count ── */
+  .record-count {
+    position: absolute;
+    top: 24px;
+    left: 32px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    box-shadow: var(--shadow-sm);
+    z-index: 20;
+  }
+  .record-count span { font-weight: 700; color: var(--accent); }
+
+  /* ── View Mode Tabs ── */
+  .view-tabs {
+    position: absolute;
+    top: 24px;
+    right: 32px;
+    display: flex;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 3px;
+    gap: 2px;
+    box-shadow: var(--shadow-sm);
+    z-index: 20;
+  }
+  .view-tab {
+    padding: 5px 14px;
+    border-radius: 16px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    color: var(--text-muted);
+    border: none;
+    background: transparent;
+    font-family: var(--font);
+    transition: all 0.2s;
+  }
+  .view-tab.active { background: var(--accent); color: #fff; }
+  .view-tab:not(.active):hover { color: var(--text-primary); }
+
+  /* ── Pulse ring on center ── */
+  @keyframes pulse-ring {
+    0% { transform: translate(-50%,-50%) scale(1); opacity: 0.5; }
+    100% { transform: translate(-50%,-50%) scale(1.5); opacity: 0; }
+  }
+  .pulse-ring {
+    position: absolute;
+    width: 230px; height: 140px;
+    border: 1px solid var(--accent);
+    border-radius: 22px;
+    pointer-events: none;
+    animation: pulse-ring 2.5s ease-out infinite;
+    top: 50%; left: 50%;
+    z-index: 0;
+  }
+
+  /* ── Fade in nodes ── */
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translate(-50%, calc(-50% + 12px)); }
+    to   { opacity: 1; transform: translate(-50%, -50%); }
+  }
+  .orbit-node, .satellite-node, .center-node {
+    animation: fadeInUp 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+
+  /* Placeholder for empty panel */
+  .panel-placeholder {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    gap: 16px;
+    color: var(--text-muted);
+    text-align: center;
+  }
+  .placeholder-icon {
+    width: 56px; height: 56px;
+    background: var(--surface-2);
+    border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .placeholder-title { font-size: 15px; font-weight: 600; color: var(--text-secondary); }
+  .placeholder-body { font-size: 13px; line-height: 1.6; max-width: 220px; }
+
+  /* Transition on panel content */
+  .panel-content { transition: opacity 0.25s ease; }
+  .panel-content.fading { opacity: 0; }
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header class="header">
+  <div class="header-left">
+    <div class="logo-mark">
+      <svg viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="9" cy="9" r="3" fill="white"/>
+        <circle cx="9" cy="9" r="6" stroke="white" stroke-width="1.2" stroke-dasharray="2.5 2"/>
+        <circle cx="9" cy="9" r="8.5" stroke="white" stroke-width="0.7" opacity="0.4"/>
+      </svg>
+    </div>
+    <div>
+      <a href="index.html" class="app-title">EpiLume</a>
+      <div class="app-subtitle">Oncology Constellation View</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="select-label">Main Oncology</span>
+    <div class="select-wrapper">
+      <select class="cancer-select" id="cancerSelect" onchange="switchCancer(this.value)">
+        <option value="bladder">Bladder cancer</option>
+        <option value="lung">Lung cancer</option>
+        <option value="prostate">Prostate cancer</option>
+        <option value="thyroid">Thyroid cancer</option>
+      </select>
+      <svg class="select-chevron" width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <path d="M3.5 5.5L7 9L10.5 5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+  </div>
+</header>
+
+<!-- ── Main Layout ── -->
+<div class="layout">
+
+  <!-- Canvas -->
+  <div class="canvas-area" id="canvasArea">
+    <div class="canvas-bg-grid"></div>
+    <div id="record-count" class="record-count">Loading…</div>
+
+    <div id="constellationRoot" style="position:relative; width:820px; height:640px;"></div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-badge" style="background:var(--green)"></div><span class="legend-label">Completed</span></div>
+      <div class="legend-item"><div class="legend-badge" style="background:var(--amber)"></div><span class="legend-label">Review needed</span></div>
+      <div class="legend-item"><div class="legend-badge" style="background:var(--text-muted)"></div><span class="legend-label">Processing</span></div>
+    </div>
+  </div>
+
+  <!-- Detail Panel -->
+  <div class="detail-panel" id="detailPanel">
+    <div id="panelContent" class="panel-content">
+      <div class="panel-placeholder">
+        <div class="placeholder-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9BA4BA" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8" stroke-dasharray="3 2"/>
+          </svg>
+        </div>
+        <div class="placeholder-title">Select a node</div>
+        <div class="placeholder-body">Click any cancer type on the constellation to explore its epidemiological data.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const DATA = {
+  bladder: {
+    root: {
+      id: 'BL0', batch: 'PHEPILME701', name: 'Bladder cancer', status: 'completed',
+      ww_prev: '1,950,315', ww_prev_year: '2022', ww_inc: '614,298', ww_inc_year: '',
+      us_prev: '744,039', us_prev_year: '', us_inc: '84,530', us_inc_year: '2026',
+      lastRun: '2026-03-25', type: 'root'
+    },
+    subtypes: [
+      { id:'BL1', batch:'PHEPILME442', name:'Non-Muscle Invasive Bladder Cancer', parent:'Bladder cancer', status:'completed', value:'75%', valueRaw:75, lastRun:'2026-02-23', group:'Based on invasion' },
+      { id:'BL2', batch:'PHEPILME703', name:'Muscle Invasive Bladder Cancer', parent:'Bladder cancer', status:'completed', value:'25% (2024)', valueRaw:25, lastRun:'2026-03-05', group:'Based on invasion' },
+      { id:'BL3', batch:'PHEPILME444', name:'Metastatic Bladder Adenocarcinoma', parent:'Bladder cancer', status:'completed', value:'6%', valueRaw:6, lastRun:'2026-02-23', group:'Based on invasion' },
+      { id:'BL4', batch:'PHEPILME704', name:'Urothelial carcinoma Adenocarcinoma', parent:'Bladder cancer', status:'completed', value:'2% (2025)', valueRaw:2, lastRun:'2026-03-25', group:'Based on cell site' },
+      { id:'BL5', batch:'PHEPILME743', name:'Squamous Cell Carcinoma', parent:'Bladder cancer', status:'completed', value:'2% to 7% (2025)', valueRaw:4, lastRun:'2026-03-25', group:'Based on cell site' },
+      { id:'BL6', batch:'PHEPILME744', name:'Sarcomas', parent:'Bladder cancer', status:'completed', value:'—%', valueRaw:0, lastRun:'2026-03-25', group:'Based on cell site' },
+      { id:'BL7', batch:'PHEPILME705', name:'Grade 1: Low Grade', parent:'Bladder cancer', status:'completed', value:'—%', valueRaw:0, lastRun:'2026-03-05', group:'Based on Grade' },
+      { id:'BL8', batch:'PHEPILME745', name:'Grade 2: Intermediate Grade', parent:'Bladder cancer', status:'completed', value:'—%', valueRaw:0, lastRun:'2026-03-25', group:'Based on Grade' },
+      { id:'BL9', batch:'PHEPILME746', name:'Grade 3: High Grade', parent:'Bladder cancer', status:'completed', value:'—%', valueRaw:0, lastRun:'2026-03-25', group:'Based on Grade' },
+    ],
+    satellites: []
+  },
+  lung: {
+    root: {
+      id:'LU0', batch:'PHEPILME367', name:'Lung cancer', status:'completed',
+      ww_prev:'2,480,675', ww_prev_year:'2022', ww_inc:'2,480,675', ww_inc_year:'2022',
+      us_prev:'635,547', us_prev_year:'', us_inc:'226,650', us_inc_year:'2025',
+      lastRun:'2026-02-16', type:'root'
+    },
+    subtypes: [
+      { id:'LU1', batch:'PHEPILME403', name:'Small Cell lung cancer', parent:'Lung cancer', status:'completed', value:'12%', valueRaw:12, lastRun:'2026-02-23', children:['LU_C1','LU_C2'] },
+      { id:'LU2', batch:'PHEPILME406', name:'Non-Small Cell', parent:'Lung cancer', status:'completed', value:'84%', valueRaw:84, lastRun:'2026-02-23', children:['LU_C3','LU_C4','LU_C5','LU_C6','LU_C7'] },
+      { id:'LU3', batch:'PHEPILME412', name:'Pulmonary sarcomatoid…', parent:'Lung cancer', status:'completed', value:'0.1 to 0.4%', valueRaw:0.25, lastRun:'2026-02-23' },
+      { id:'LU4', batch:'PHEPILME724', name:'Giant-cell carcinoma of the lung', parent:'Lung cancer', status:'completed', value:'1% (2023)', valueRaw:1, lastRun:'2026-03-25' },
+    ],
+    satellites: [
+      { id:'LU_C1', batch:'PHEPILME404', name:'Small Cell', parentId:'LU1', parent:'Small Cell lung cancer', status:'completed', value:'12%', valueRaw:12, lastRun:'2026-02-23' },
+      { id:'LU_C2', batch:'PHEPILME488', name:'Combined cell', parentId:'LU1', parent:'Small Cell lung cancer', status:'completed', value:'—%', valueRaw:0, lastRun:'2026-09-24' },
+      { id:'LU_C3', batch:'PHEPILME407', name:'Adenocarcinoma', parentId:'LU2', parent:'Non-Small Cell', status:'completed', value:'45%', valueRaw:45, lastRun:'2026-02-23' },
+      { id:'LU_C4', batch:'PHEPILME408', name:'Squamous cell carcinoma', parentId:'LU2', parent:'Non-Small Cell', status:'completed', value:'30%', valueRaw:30, lastRun:'2026-02-23' },
+      { id:'LU_C5', batch:'PHEPILME409', name:'Large cell carcinoma', parentId:'LU2', parent:'Non-Small Cell', status:'completed', value:'8% (men), 6% (women)', valueRaw:7, lastRun:'2025-02-23' },
+      { id:'LU_C6', batch:'PHEPILME725', name:'Adenosquamous carcinoma', parentId:'LU2', parent:'Non-Small Cell', status:'completed', value:'1.1% (2024)', valueRaw:1.1, lastRun:'2026-03-20' },
+      { id:'LU_C7', batch:'PHEPILME411', name:'Sarcomatoid carcinoma', parentId:'LU2', parent:'Non-Small Cell', status:'completed', value:'0.1–0.4%', valueRaw:0.25, lastRun:'2026-02-23' },
+    ]
+  },
+  prostate: {
+    root: {
+      id:'PR0', batch:'PHEPILME414', name:'Prostate cancer', status:'completed',
+      ww_prev:'5,033,178', ww_prev_year:'2022', ww_inc:'1,467,854', ww_inc_year:'2022',
+      us_prev:'3,518,978', us_prev_year:'2022', us_inc:'333,830', us_inc_year:'2026',
+      lastRun:'2026-02-23', type:'root'
+    },
+    subtypes: [
+      { id:'PR1', batch:'PHEPILME735', name:'Adenocarcinoma', parent:'Prostate cancer', status:'completed', value:'95% (2026)', valueRaw:95, lastRun:'2026-03-25', children:['PR_C1','PR_C2'] },
+      { id:'PR2', batch:'PHEPILME418', name:'Neuroendocrine prostate cancer', parent:'Prostate cancer', status:'completed', value:'1%', valueRaw:1, lastRun:'2026-02-23' },
+      { id:'PR3', batch:'PHEPILME419', name:'Squamous cell prostate cancer', parent:'Prostate cancer', status:'completed', value:'<1%', valueRaw:0.5, lastRun:'2026-02-23' },
+      { id:'PR4', batch:'PHEPILME830', name:'Transitional cell prostate cancer', parent:'Prostate cancer', status:'completed', value:'—%', valueRaw:0, lastRun:'2026-03-26' },
+      { id:'PR5', batch:'PHEPILME421', name:'Small cell prostate cancer', parent:'Prostate cancer', status:'completed', value:'<1%', valueRaw:0.5, lastRun:'2026-02-23', children:['PR_C3','PR_C4'] },
+    ],
+    satellites: [
+      { id:'PR_C1', batch:'PHEPILME424', name:'Acinar adenocarcinoma', parentId:'PR1', parent:'Adenocarcinoma', status:'completed', value:'90–95%', valueRaw:92, lastRun:'2026-02-23' },
+      { id:'PR_C2', batch:'PHEPILME736', name:'Prostatic ductal adenocarcinoma', parentId:'PR1', parent:'Adenocarcinoma', status:'completed', value:'3-5% (2024)', valueRaw:4, lastRun:'2026-03-25' },
+      { id:'PR_C3', batch:'PHEPILME422', name:'Sarcoma', parentId:'PR5', parent:'Small cell prostate cancer', status:'completed', value:'0.7%', valueRaw:0.7, lastRun:'2026-02-23' },
+      { id:'PR_C4', batch:'PHEPILME423', name:'Lymphoma', parentId:'PR5', parent:'Small cell prostate cancer', status:'completed', value:'0.1%', valueRaw:0.1, lastRun:'2026-02-23' },
+    ]
+  },
+  thyroid: {
+    root: {
+      id:'TH0', batch:'PHEPILME855', name:'Thyroid cancer', status:'review',
+      ww_prev:'REVIEW', ww_prev_year:'', ww_inc:'REVIEW', ww_inc_year:'',
+      us_prev:'REVIEW', us_prev_year:'', us_inc:'REVIEW', us_inc_year:'',
+      lastRun:'2026-03-30', type:'root'
+    },
+    subtypes: [
+      { id:'TH1', batch:'PHEPILME520', name:'Differentiated thyroid cancer', parent:'Thyroid cancer', status:'completed', value:'Approx. 90%', valueRaw:90, lastRun:'2026-02-24', children:['TH_C1','TH_C2','TH_C3'] },
+      { id:'TH2', batch:'PHEPILME525', name:'Undifferentiated thyroid cancer', parent:'Thyroid cancer', status:'completed', value:'2-3%', valueRaw:2.5, lastRun:'2026-02-24', children:['TH_C4'] },
+      { id:'TH3', batch:'PHEPILME527', name:'Medullary thyroid cancer', parent:'Thyroid cancer', status:'completed', value:'<5%', valueRaw:3, lastRun:'2026-02-24' },
+    ],
+    satellites: [
+      { id:'TH_C1', batch:'PHEPILME521', name:'Papillary thyroid cancer', parentId:'TH1', parent:'Differentiated thyroid cancer', status:'completed', value:'80 to 85%', valueRaw:82, lastRun:'2026-02-24' },
+      { id:'TH_C2', batch:'PHEPILME522', name:'Follicular thyroid cancer', parentId:'TH1', parent:'Differentiated thyroid cancer', status:'completed', value:'10 to 15%', valueRaw:12, lastRun:'2026-02-24' },
+      { id:'TH_C3', batch:'PHEPILME523', name:'Hurtle cell cancer', parentId:'TH1', parent:'Differentiated thyroid cancer', status:'completed', value:'—%', valueRaw:0, lastRun:'2026-02-24' },
+      { id:'TH_C4', batch:'PHEPILME526', name:'Anaplastic thyroid cancer (ATC)', parentId:'TH2', parent:'Undifferentiated thyroid cancer', status:'completed', value:'2% to 3%', valueRaw:2.5, lastRun:'2026-02-24' },
+    ]
+  }
+};
+
+let currentCancer = 'bladder';
+let selectedNode = null;
+
+function getStatusBadge(status) {
+  if (status === 'completed') return `<span class="badge badge-completed"><span class="badge-dot"></span>Completed</span>`;
+  if (status === 'review')    return `<span class="badge badge-review"><span class="badge-dot"></span>Review Needed</span>`;
+  return `<span class="badge badge-processing"><span class="badge-dot"></span>Processing</span>`;
+}
+
+function switchCancer(val) {
+  currentCancer = val;
+  selectedNode = null;
+  renderConstellation();
+  resetPanel();
+}
+
+function resetPanel() {
+  document.getElementById('panelContent').innerHTML = `
+    <div class="panel-placeholder">
+      <div class="placeholder-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9BA4BA" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8" stroke-dasharray="3 2"/>
+        </svg>
+      </div>
+      <div class="placeholder-title">Select a node</div>
+      <div class="placeholder-body">Click any cancer type on the constellation to explore its epidemiological data.</div>
+    </div>`;
+}
+
+function renderConstellation() {
+  const d = DATA[currentCancer];
+  const root = document.getElementById('constellationRoot');
+  root.innerHTML = '';
+
+  const totalNodes = d.subtypes.length + d.satellites.length + 1;
+  document.getElementById('record-count').innerHTML = `<span>${totalNodes}</span> Records`;
+
+  const W = 820, H = 640;
+  const cx = W / 2, cy = H / 2;
+
+  // SVG layer for connectors
+  const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('width', W); svg.setAttribute('height', H);
+  svg.style.position = 'absolute'; svg.style.inset = '0'; svg.style.pointerEvents = 'none';
+  root.appendChild(svg);
+
+  // Pulse rings on center
+  const pulse = document.createElement('div');
+  pulse.className = 'pulse-ring';
+  pulse.style.left = cx+'px'; pulse.style.top = cy+'px';
+  root.appendChild(pulse);
+
+  // Place center node
+  const centerEl = document.createElement('div');
+  centerEl.className = 'center-node';
+  centerEl.style.left = cx+'px'; centerEl.style.top = cy+'px';
+  centerEl.style.animationDelay = '0ms';
+
+  const isReview = d.root.status === 'review';
+  const statHtml = isReview
+    ? ['WW Prevalence','WW Incidence','US Prevalence','US Incidence'].map(l =>
+        `<div class="stat-cell"><div class="stat-label">${l}</div><div class="stat-value" style="color:var(--amber);font-size:11px">REVIEW</div></div>`
+      ).join('')
+    : `
+      <div class="stat-cell"><div class="stat-label">WW Prevalence</div><div class="stat-value">${d.root.ww_prev}<div class="stat-year">${d.root.ww_prev_year}</div></div></div>
+      <div class="stat-cell"><div class="stat-label">WW Incidence</div><div class="stat-value">${d.root.ww_inc}<div class="stat-year">${d.root.ww_inc_year}</div></div></div>
+      <div class="stat-cell"><div class="stat-label">US Prevalence</div><div class="stat-value">${d.root.us_prev}<div class="stat-year">${d.root.us_prev_year}</div></div></div>
+      <div class="stat-cell"><div class="stat-label">US Incidence</div><div class="stat-value">${d.root.us_inc}<div class="stat-year">${d.root.us_inc_year}</div></div></div>`;
+
+  centerEl.innerHTML = `<div class="center-card" onclick="selectNode('${d.root.id}', 'root')">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <div class="center-batch">${d.root.batch}</div>
+      ${getStatusBadge(d.root.status)}
+    </div>
+    <div class="center-name">${d.root.name}</div>
+    <div class="stats-grid">${statHtml}</div>
+    <div class="center-footer">
+      <span class="last-run-text">Last run: ${d.root.lastRun}</span>
+    </div>
+  </div>`;
+  root.appendChild(centerEl);
+
+  // Position subtypes in an ellipse
+  const n = d.subtypes.length;
+  const positions = {};
+  const orbitRx = 310, orbitRy = 230;
+  const angleOffset = -Math.PI / 2;
+
+  d.subtypes.forEach((sub, i) => {
+    const angle = angleOffset + (2 * Math.PI * i / n);
+    const x = cx + orbitRx * Math.cos(angle);
+    const y = cy + orbitRy * Math.sin(angle);
+    positions[sub.id] = { x, y };
+
+    // Connector: center → subtype
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', cx); line.setAttribute('y1', cy);
+    line.setAttribute('x2', x);  line.setAttribute('y2', y);
+    line.setAttribute('class','connector');
+    svg.appendChild(line);
+
+    // Node element
+    const el = document.createElement('div');
+    el.className = 'orbit-node';
+    el.id = 'node-' + sub.id;
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+    el.style.animationDelay = (80 + i * 60) + 'ms';
+
+    const valDisplay = sub.valueRaw > 0
+      ? `<div class="subtype-block"><div class="subtype-label-sm">Subtype Value</div><div class="subtype-value">${sub.value}</div></div>`
+      : `<div class="subtype-block"><div class="subtype-label-sm">Subtype Value</div><div class="subtype-value" style="opacity:0.4">—</div></div>`;
+
+    el.innerHTML = `<div class="orbit-card" onclick="selectNode('${sub.id}', 'subtype')">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
+        <div class="orbit-batch">${sub.batch}</div>
+        ${getStatusBadge(sub.status)}
+      </div>
+      <div class="orbit-name">${sub.name}</div>
+      <div class="orbit-parent">Part of: ${sub.parent}</div>
+      ${valDisplay}
+      <div class="orbit-footer">
+        <span class="run-date">${sub.lastRun}</span>
+      </div>
+    </div>`;
+    root.appendChild(el);
+  });
+
+  // Position satellites orbiting their parent subtype
+  const satellitesByParent = {};
+  (d.satellites || []).forEach(sat => {
+    if (!satellitesByParent[sat.parentId]) satellitesByParent[sat.parentId] = [];
+    satellitesByParent[sat.parentId].push(sat);
+  });
+
+  Object.entries(satellitesByParent).forEach(([parentId, sats]) => {
+    const pPos = positions[parentId];
+    if (!pPos) return;
+    sats.forEach((sat, j) => {
+      const spreadAngle = (j - (sats.length - 1) / 2) * 0.55;
+      const baseAngle = Math.atan2(pPos.y - cy, pPos.x - cx);
+      const satAngle = baseAngle + spreadAngle;
+      const satR = 130;
+      const sx = pPos.x + satR * Math.cos(satAngle);
+      const sy = pPos.y + satR * Math.sin(satAngle);
+
+      // Clamp to canvas
+      const safeX = Math.max(80, Math.min(W - 80, sx));
+      const safeY = Math.max(80, Math.min(H - 80, sy));
+
+      // Connector: parent → satellite
+      const line2 = document.createElementNS('http://www.w3.org/2000/svg','line');
+      line2.setAttribute('x1', pPos.x); line2.setAttribute('y1', pPos.y);
+      line2.setAttribute('x2', safeX);  line2.setAttribute('y2', safeY);
+      line2.setAttribute('class','connector');
+      line2.setAttribute('stroke-opacity','0.5');
+      svg.appendChild(line2);
+
+      const sel = document.createElement('div');
+      sel.className = 'satellite-node';
+      sel.id = 'node-' + sat.id;
+      sel.style.left = safeX + 'px';
+      sel.style.top = safeY + 'px';
+      sel.style.animationDelay = (200 + j * 50) + 'ms';
+
+      const sv = sat.valueRaw > 0
+        ? `<div class="satellite-value-block"><div class="satellite-value">${sat.value}</div></div>`
+        : `<div class="satellite-value-block"><div class="satellite-value" style="opacity:0.35">—</div></div>`;
+
+      sel.innerHTML = `<div class="satellite-card" onclick="selectNode('${sat.id}', 'satellite')">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
+          <div class="satellite-batch">${sat.batch}</div>
+          ${getStatusBadge(sat.status)}
+        </div>
+        <div class="satellite-name">${sat.name}</div>
+        <div class="satellite-parent-label">Part of: ${sat.parent}</div>
+        ${sv}
+        <div class="satellite-run">${sat.lastRun}</div>
+      </div>`;
+      root.appendChild(sel);
+    });
+  });
+}
+
+function selectNode(id, type) {
+  // Deactivate previous
+  document.querySelectorAll('.orbit-node, .satellite-node').forEach(el => el.classList.remove('active'));
+  if (id !== DATA[currentCancer].root.id) {
+    const el = document.getElementById('node-' + id);
+    if (el) el.classList.add('active');
+  }
+  selectedNode = id;
+
+  const d = DATA[currentCancer];
+  const pc = document.getElementById('panelContent');
+  pc.classList.add('fading');
+
+  setTimeout(() => {
+    if (type === 'root') {
+      renderRootPanel(d.root, d.subtypes);
+    } else {
+      const all = [...d.subtypes, ...(d.satellites || [])];
+      const node = all.find(n => n.id === id);
+      if (node) renderNodePanel(node, d.satellites || []);
+    }
+    pc.classList.remove('fading');
+  }, 150);
+}
+
+function renderRootPanel(root, subtypes) {
+  const pc = document.getElementById('panelContent');
+  const isReview = root.status === 'review';
+
+  const statCard = (label, val, year) => `
+    <div class="stat-card-lg">
+      <div class="stat-card-label">${label}</div>
+      ${isReview
+        ? `<div class="review-value">⚠ Review</div>`
+        : `<div class="stat-card-value">${val}</div><div class="stat-card-year">${year || ''}</div>`}
+    </div>`;
+
+  const childrenHtml = subtypes.map(s => `
+    <div class="child-item" onclick="selectNode('${s.id}','subtype')">
+      <div class="child-dot"></div>
+      <span class="child-name">${s.name}</span>
+      <span class="child-pct">${s.value}</span>
+    </div>`).join('');
+
+  pc.innerHTML = `
+    <div class="panel-header">
+      <div class="panel-eyebrow">Root — Level 0</div>
+      <div class="panel-title">${root.name}</div>
+      <div class="panel-meta">${getStatusBadge(root.status)}</div>
+      <div class="panel-batch">${root.batch}</div>
+    </div>
+    <div class="panel-body">
+      <div class="panel-section">
+        <div class="panel-section-title">Epidemiological Statistics</div>
+        <div class="stat-row-grid">
+          ${statCard('WW Prevalence', root.ww_prev, root.ww_prev_year)}
+          ${statCard('WW Incidence', root.ww_inc, root.ww_inc_year)}
+          ${statCard('US Prevalence', root.us_prev, root.us_prev_year)}
+          ${statCard('US Incidence', root.us_inc, root.us_inc_year)}
+        </div>
+      </div>
+      <div class="panel-section">
+        <div class="panel-section-title">Subtypes (${subtypes.length})</div>
+        <div class="children-list">${childrenHtml}</div>
+      </div>
+      <div class="panel-section">
+        <div class="panel-section-title">Run Info</div>
+        <div style="font-size:13px;color:var(--text-secondary)">Last run: <strong style="color:var(--text-primary);font-family:var(--mono)">${root.lastRun}</strong></div>
+      </div>
+    </div>
+    <div class="panel-footer">
+      ${root.status === 'review'
+        ? `<button class="btn btn-review">⚠ Review Data</button>`
+        : `<button class="btn btn-primary">View Full Report</button>`}
+      <button class="btn btn-secondary">Export</button>
+    </div>`;
+}
+
+function renderNodePanel(node, satellites) {
+  const pc = document.getElementById('panelContent');
+  const children = satellites.filter(s => s.parentId === node.id);
+  const hasChildren = children.length > 0;
+
+  const pctBar = (val, label) => {
+    const numVal = parseFloat(val) || 0;
+    const pct = Math.min(numVal, 100);
+    return `<div class="subtype-pct-section">
+      <div class="subtype-pct-header">
+        <span class="subtype-pct-label">${label}</span>
+        <span class="subtype-pct-value">${val}</span>
+      </div>
+      <div class="pct-track"><div class="pct-fill" style="width:${pct}%"></div></div>
+    </div>`;
+  };
+
+  const childrenHtml = hasChildren ? `
+    <div class="panel-section">
+      <div class="panel-section-title">Sub-subtypes (${children.length})</div>
+      <div class="children-list">${children.map(c => `
+        <div class="child-item" onclick="selectNode('${c.id}','satellite')">
+          <div class="child-dot" style="background:#8B5CF6"></div>
+          <span class="child-name">${c.name}</span>
+          <span class="child-pct">${c.value}</span>
+        </div>`).join('')}
+      </div>
+    </div>` : '';
+
+  const level = node.parentId ? 'Level 2 — Sub-subtype' : 'Level 1 — Subtype';
+
+  pc.innerHTML = `
+    <div class="panel-header">
+      <div class="panel-eyebrow">${level}</div>
+      <div class="panel-title">${node.name}</div>
+      <div class="panel-meta">Part of: ${node.parent} &nbsp;·&nbsp; ${getStatusBadge(node.status)}</div>
+      <div class="panel-batch">${node.batch}</div>
+    </div>
+    <div class="panel-body">
+      ${node.group ? `<div class="panel-section">
+        <div class="panel-section-title">Classification</div>
+        <div style="font-size:13px;color:var(--text-secondary);background:var(--surface-2);border:1px solid var(--border-light);border-radius:8px;padding:10px 14px;">${node.group}</div>
+      </div>` : ''}
+      <div class="panel-section">
+        <div class="panel-section-title">Epidemiology Percentage</div>
+        ${pctBar(node.value, 'Subtype prevalence share')}
+      </div>
+      ${childrenHtml}
+      <div class="panel-section">
+        <div class="panel-section-title">Run Info</div>
+        <div style="font-size:13px;color:var(--text-secondary)">Last run: <strong style="color:var(--text-primary);font-family:var(--mono)">${node.lastRun}</strong></div>
+      </div>
+    </div>
+    <div class="panel-footer">
+      ${node.status === 'review'
+        ? `<button class="btn btn-review">⚠ Review Data</button>`
+        : `<button class="btn btn-primary">View Full Report</button>`}
+      <button class="btn btn-secondary">Export</button>
+    </div>`;
+}
+
+// Init
+renderConstellation();
+</script>
+</body>
+</html>
