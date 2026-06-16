@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EpiLume — Sankey Diagram</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f8fafc;
+    --surface: #ffffff;
+    --surface2: #f1f5f9;
+    --border: #e2e8f0;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-muted: #64748b;
+
+    --root-fill: #ede9fe;
+    --root-stroke: #8b5cf6;
+    --root-text: #5b21b6;
+
+    --nk-fill: #e0f2fe;
+    --nk-stroke: #0ea5e9;
+    --nk-text: #0369a1;
+
+    --b-fill: #d1fae5;
+    --b-stroke: #10b981;
+    --b-text: #047857;
+
+    --sub-nk-fill: #f0f9ff;
+    --sub-nk-stroke: rgba(14, 165, 233, 0.4);
+
+    --sub-b-fill: #ecfdf5;
+    --sub-b-stroke: rgba(16, 185, 129, 0.4);
+
+    --review-fill: #ffedd5;
+    --review-stroke: #f97316;
+    --review-text: #c2410c;
+
+    --link-nk: rgba(14, 165, 233, 0.18);
+    --link-b: rgba(16, 185, 129, 0.18);
+    --link-root: rgba(139, 92, 246, 0.2);
+  }
+
+  body {
+    background: var(--bg);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    color: var(--text-primary);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  header {
+    padding: 2.5rem 3rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 2rem;
+  }
+
+  .header-left h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+    line-height: 1.2;
+  }
+
+  .header-left p {
+    margin-top: 0.4rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .legend {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+    padding-top: 0.25rem;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    letter-spacing: 0.04em;
+  }
+
+  .legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .stage-labels {
+    display: flex;
+    justify-content: space-between;
+    padding: 1.2rem 3rem 0.4rem;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .stage-label { text-align: center; flex: 1; }
+
+  #diagram-wrap {
+    overflow: hidden;
+    padding: 0;
+    position: relative;
+    height: calc(100vh - 200px);
+  }
+
+  .canvas-controls {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: var(--surface);
+    padding: 8px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    border: 1px solid var(--border);
+  }
+
+  .ctrl-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--text-secondary);
+    transition: 0.15s;
+    user-select: none;
+  }
+  .ctrl-btn:hover {
+    background: var(--surface2);
+    color: var(--text-primary);
+  }
+
+  #sankey-svg { 
+    display: block; 
+    cursor: grab;
+    width: 100%;
+    height: 100%;
+  }
+  #sankey-svg:active { cursor: grabbing; }
+
+  .node-root rect      { fill: var(--root-fill);   stroke: var(--root-stroke); stroke-width: 1.5; }
+  .node-nk rect        { fill: var(--nk-fill);     stroke: var(--nk-stroke);  stroke-width: 1; }
+  .node-b rect         { fill: var(--b-fill);      stroke: var(--b-stroke);   stroke-width: 1; }
+  .node-sub-nk rect    { fill: var(--sub-nk-fill); stroke: var(--sub-nk-stroke); stroke-width: 0.8; }
+  .node-sub-b rect     { fill: var(--sub-b-fill);  stroke: var(--sub-b-stroke);  stroke-width: 0.8; }
+  .node-review rect    { fill: var(--review-fill); stroke: var(--review-stroke); stroke-width: 1; }
+
+  .node-label-primary   { fill: var(--root-text); font-size: 12px; font-weight: 600; }
+  .node-label-nk        { fill: var(--nk-text);   font-size: 11px; font-weight: 600; }
+  .node-label-b         { fill: var(--b-text);    font-size: 11px; font-weight: 600; }
+  .node-label-sub-nk    { fill: #0284c7;           font-size: 10px; font-weight: 500; }
+  .node-label-sub-b     { fill: #059669;           font-size: 10px; font-weight: 500; }
+  .node-label-review    { fill: var(--review-text);font-size: 10px; font-weight: 500; }
+  .node-label-value     { fill: var(--text-secondary); font-size: 9px; }
+  .node-label-value-hi  { fill: #7c3aed; font-size: 9px; font-weight: 600; }
+
+  .review-badge {
+    font-size: 7.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    fill: var(--review-text);
+  }
+
+  .link { fill: none; transition: opacity 0.2s; }
+  .link:hover { opacity: 1 !important; }
+
+  .glow-line {
+    stroke-width: 1;
+    opacity: 0.3;
+    fill: none;
+  }
+
+  footer {
+    padding: 1.2rem 3rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .badge-count {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 0.2rem 0.6rem;
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    letter-spacing: 0.05em;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .link { transition: opacity 0.25s, stroke-width 0.25s; }
+  }
+
+  /* DETAIL PANEL */
+  .body-wrap { display: flex; flex: 1; overflow: hidden; width: 100%; height: calc(100vh - 165px); }
+  #diagram-wrap { height: 100% !important; }
+  .detail-panel { width:360px; flex-shrink:0; background:var(--surface); border-left:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; z-index: 10; }
+  .dp-header { padding:22px 24px 18px; border-bottom:1px solid var(--border); flex-shrink:0; }
+  .dp-eyebrow { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:var(--text-secondary); margin-bottom:7px; }
+  .dp-title { font-size:20px; font-weight:800; letter-spacing:-.03em; line-height:1.2; margin-bottom:6px; }
+  .dp-meta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:5px; }
+  .dp-batch { font:400 10.5px/1 var(--text-muted); color:var(--text-muted); }
+  .dp-body { flex:1; overflow-y:auto; padding:18px 24px; }
+  .dp-body::-webkit-scrollbar { width:3px; }
+  .dp-body::-webkit-scrollbar-track { background:transparent; }
+  .dp-body::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+  .dp-section { margin-bottom:22px; }
+  .dp-sec-title { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:var(--text-muted); padding-bottom:8px; border-bottom:1px solid var(--border); margin-bottom:11px; }
+  .dp-stat-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .dp-stat-card { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px 14px; position:relative; overflow:hidden; }
+  .dp-stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--nk-stroke),var(--b-stroke)); opacity:.45; }
+  .dp-sc-label { font-size:9px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--text-secondary); margin-bottom:5px; }
+  .dp-sc-value { font-size:18px; font-weight:800; letter-spacing:-.03em; color:var(--text-primary); line-height:1; }
+  .dp-sc-year { font-size:10px; color:var(--text-secondary); font-weight:400; margin-top:1px; }
+  .dp-sc-review { font-size:13px; font-weight:700; color:#f97316; }
+  .dp-empty { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 32px; gap:14px; text-align:center; }
+  .dp-empty-icon { width:54px; height:54px; border-radius:16px; background:var(--surface2); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .dp-empty-title { font-size:15px; font-weight:700; color:var(--text-secondary); }
+  .dp-empty-body { font-size:13px; color:var(--text-muted); line-height:1.6; max-width:200px; }
+  .fade-target { transition:opacity .18s ease; }
+  .fading { opacity:0; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1 id="viewTitle">Non-Hodgkin's Lymphoma — Oncology Hierarchy</h1>
+    <p id="viewSubtitle">Batch No. PHEPILME454 &nbsp;·&nbsp; EpiLume Sankey View &nbsp;·&nbsp; 25 Records</p>
+  </div>
+  <div class="header-right" style="display:flex; align-items:center; gap:20px;">
+    <div class="legend">
+      <span class="legend-item"><span class="legend-dot" style="background:#8b5cf6"></span>Main type</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#0ea5e9"></span>NK/T-cell branch</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#10b981"></span>B-cell branch</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#f97316"></span>Review needed</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#94a3b8"></span>Value pending</span>
+    </div>
+    <div style="border-left:1px solid var(--border); padding-left:20px;">
+      <span style="font-size:12px; color:var(--text-secondary); margin-right:8px; font-weight:500;">Select Main Oncology:</span>
+      <select id="cancerSel" onchange="renderSankey(this.value)" style="padding:6px 12px; border-radius:6px; border:1px solid var(--border); background:var(--surface); color:var(--text-primary); font-family:inherit; font-size:13px; outline:none; cursor:pointer;">
+        <option value="bladder">Bladder cancer</option>
+        <option value="lung">Lung cancer</option>
+        <option value="prostate">Prostate cancer</option>
+        <option value="thyroid">Thyroid cancer</option>
+        <option value="nhl" selected>Non-Hodgkin's lymphoma</option>
+      </select>
+    </div>
+  </div>
+</header>
+
+<div class="stage-labels">
+  <span class="stage-label">Level 0 — Main type</span>
+  <span class="stage-label">Level 1 — Primary classification</span>
+  <span class="stage-label">Level 2 — Subtype</span>
+  <span class="stage-label">Level 3 — Sub-subtype</span>
+</div>
+
+<div class="body-wrap">
+  <div id="diagram-wrap" style="flex:1">
+    <svg id="sankey-svg">
+      <g id="sankey-g"></g>
+    </svg>
+    <div class="canvas-controls">
+      <div class="ctrl-btn" onclick="zoomIn()" title="Zoom in">+</div>
+      <div class="ctrl-btn" onclick="zoomOut()" title="Zoom out">−</div>
+      <div class="ctrl-btn" onclick="fitToScreen()" title="Fit" style="font-size:12px">⊡</div>
+    </div>
+  </div>
+
+  <div class="detail-panel" id="detailPanel">
+    <div id="panelInner" class="fade-target">
+      <div class="dp-empty">
+        <div class="dp-empty-icon">
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="#64748b" stroke-width="1.4" stroke-linecap="round">
+            <circle cx="11" cy="11" r="3.5"/><circle cx="11" cy="11" r="7.5" stroke-dasharray="2.5 2"/>
+            <circle cx="11" cy="11" r="10" stroke-width=".7" opacity=".4"/>
+          </svg>
+        </div>
+        <div class="dp-empty-title">Select a node</div>
+        <div class="dp-empty-body">Click any cancer type on the diagram to view epidemiological details.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <span>PharSights EpiLume · Oncology Family View · Data sourced 2024–2026</span>
+  <span class="badge-count" id="footerBadge">25 Records · Last Run: 2026-03-26</span>
+</footer>
+
+<script>
+const DATA = {
+  bladder:{
+    root:{ id:'BL0', batch:'PHEPILME701', name:'Bladder cancer', status:'completed', ww_prev:'1,950,315', ww_prev_yr:'2022', ww_inc:'614,298', us_prev:'744,039', us_inc:'84,530', us_inc_yr:'2026', lastRun:'2026-03-25' },
+    spokes:[
+      { id:'BL1', batch:'PHEPILME442', name:'Non-Muscle Invasive Bladder Cancer', parent:'Bladder cancer', status:'completed', val:'75%', sats:[] },
+      { id:'BL2', batch:'PHEPILME703', name:'Muscle Invasive Bladder Cancer', parent:'Bladder cancer', status:'completed', val:'25% (2024)', sats:[] },
+      { id:'BL3', batch:'PHEPILME444', name:'Metastatic Bladder Adenocarcinoma', parent:'Bladder cancer', status:'completed', val:'6%', sats:[] },
+      { id:'BL4', batch:'PHEPILME704', name:'Urothelial Carcinoma Adenocarcinoma', parent:'Bladder cancer', status:'completed', val:'2% (2025)', sats:[] },
+      { id:'BL5', batch:'PHEPILME743', name:'Squamous Cell Carcinoma', parent:'Bladder cancer', status:'completed', val:'2% to 7% (2025)', sats:[] },
+      { id:'BL6', batch:'PHEPILME744', name:'Sarcomas', parent:'Bladder cancer', status:'completed', val:'—', sats:[] },
+      { id:'BL7', batch:'PHEPILME705', name:'Grade 1: Low Grade', parent:'Bladder cancer', status:'completed', val:'—', sats:[] },
+      { id:'BL8', batch:'PHEPILME745', name:'Grade 2: Intermediate Grade', parent:'Bladder cancer', status:'completed', val:'—', sats:[] },
+      { id:'BL9', batch:'PHEPILME746', name:'Grade 3: High Grade', parent:'Bladder cancer', status:'completed', val:'—', sats:[] },
+    ]
+  },
+  lung:{
+    root:{ id:'LU0', batch:'PHEPILME367', name:'Lung cancer', status:'completed', ww_prev:'2,480,675', ww_prev_yr:'2022', ww_inc:'2,480,675', us_prev:'635,547', us_inc:'226,650', us_inc_yr:'2025', lastRun:'2026-02-16' },
+    spokes:[
+      { id:'LU1', batch:'PHEPILME403', name:'Small Cell Lung Cancer', status:'completed', val:'12%',
+        sats:[
+          { id:'LU1a', batch:'PHEPILME404', name:'Small Cell', status:'completed', val:'12%', deep:[] },
+          { id:'LU1b', batch:'PHEPILME488', name:'Combined Cell', status:'completed', val:'—', deep:[] },
+        ]},
+      { id:'LU2', batch:'PHEPILME406', name:'Non-Small Cell', status:'completed', val:'84%',
+        sats:[
+          { id:'LU2a', batch:'PHEPILME407', name:'Adenocarcinoma', status:'completed', val:'45%', deep:[] },
+          { id:'LU2b', batch:'PHEPILME408', name:'Squamous Cell Carcinoma', status:'completed', val:'30%', deep:[] },
+          { id:'LU2c', batch:'PHEPILME409', name:'Large Cell Carcinoma', status:'completed', val:'8% (men), 6% (women)', deep:[] },
+          { id:'LU2d', batch:'PHEPILME725', name:'Adenosquamous Carcinoma', status:'completed', val:'1.1% (2024)', deep:[] },
+          { id:'LU2e', batch:'PHEPILME411', name:'Sarcomatoid Carcinoma', status:'completed', val:'0.1–0.4%', deep:[] },
+        ]},
+      { id:'LU3', batch:'PHEPILME412', name:'Pulmonary Sarcomatoid Carcinoma', status:'completed', val:'0.1–0.4%', sats:[] },
+      { id:'LU4', batch:'PHEPILME724', name:'Giant-Cell Carcinoma of the Lung', status:'completed', val:'1% (2023)', sats:[] },
+    ]
+  },
+  prostate:{
+    root:{ id:'PR0', batch:'PHEPILME414', name:'Prostate cancer', status:'completed', ww_prev:'5,033,178', ww_prev_yr:'2022', ww_inc:'1,467,854', us_prev:'3,518,978', us_inc:'333,830', us_inc_yr:'2026', lastRun:'2026-02-23' },
+    spokes:[
+      { id:'PR1', batch:'PHEPILME735', name:'Adenocarcinoma', status:'completed', val:'95% (2026)',
+        sats:[
+          { id:'PR1a', batch:'PHEPILME424', name:'Acinar Adenocarcinoma', status:'completed', val:'90–95%', deep:[] },
+          { id:'PR1b', batch:'PHEPILME736', name:'Prostatic Ductal Adenocarcinoma', status:'completed', val:'3–5% (2024)', deep:[] },
+        ]},
+      { id:'PR2', batch:'PHEPILME418', name:'Neuroendocrine Prostate Cancer', status:'completed', val:'1%', sats:[] },
+      { id:'PR3', batch:'PHEPILME419', name:'Squamous Cell Prostate Cancer', status:'completed', val:'<1%', sats:[] },
+      { id:'PR4', batch:'PHEPILME830', name:'Transitional Cell Prostate Cancer', status:'completed', val:'—', sats:[] },
+      { id:'PR5', batch:'PHEPILME421', name:'Small Cell Prostate Cancer', status:'completed', val:'<1%',
+        sats:[
+          { id:'PR5a', batch:'PHEPILME422', name:'Sarcoma', status:'completed', val:'0.7%', deep:[] },
+          { id:'PR5b', batch:'PHEPILME423', name:'Lymphoma', status:'completed', val:'0.1%', deep:[] },
+        ]},
+    ]
+  },
+  thyroid:{
+    root:{ id:'TH0', batch:'PHEPILME855', name:'Thyroid cancer', status:'review', ww_prev:'REVIEW', ww_prev_yr:'', ww_inc:'REVIEW', us_prev:'REVIEW', us_inc:'REVIEW', us_inc_yr:'', lastRun:'2026-03-30' },
+    spokes:[
+      { id:'TH1', batch:'PHEPILME520', name:'Differentiated Thyroid Cancer', status:'completed', val:'~90%',
+        sats:[
+          { id:'TH1a', batch:'PHEPILME521', name:'Papillary Thyroid Cancer', status:'completed', val:'80–85%', deep:[] },
+          { id:'TH1b', batch:'PHEPILME522', name:'Follicular Thyroid Cancer', status:'completed', val:'10–15%', deep:[] },
+          { id:'TH1c', batch:'PHEPILME523', name:'Hürthle Cell Cancer', status:'completed', val:'—', deep:[] },
+        ]},
+      { id:'TH2', batch:'PHEPILME525', name:'Undifferentiated Thyroid Cancer', status:'completed', val:'2–3%',
+        sats:[
+          { id:'TH2a', batch:'PHEPILME526', name:'Anaplastic Thyroid Cancer (ATC)', status:'completed', val:'2–3%', deep:[] },
+        ]},
+      { id:'TH3', batch:'PHEPILME527', name:'Medullary Thyroid Cancer', status:'completed', val:'<5%', sats:[] },
+    ]
+  },
+  nhl:{
+    root:{ id:'NHL0', batch:'PHEPILME654', name:"Non-Hodgkin's lymphoma", status:'completed', ww_prev:'1,738,516', ww_prev_yr:'2022', ww_inc:'553,389', us_prev:'835,496 (2022)', us_inc:'80,350', us_inc_yr:'', lastRun:'2026-02-23' },
+    spokes:[
+      {
+        id:'NHL1', batch:'PHEPILME607', name:'Natural Killer/T-cell lymphomas', status:'completed', val:'—',
+        sats:[
+          {
+            id:'NHL1a', batch:'PHEPILME646', name:'T-lymphoblastic lymphoma/leukemia', status:'completed', val:'1%',
+            deep:[
+              { id:'NHL1a1', batch:'PHEPILME611', name:'Cutaneous T-cell lymphomas', status:'completed', val:'1%' },
+              { id:'NHL1a2', batch:'PHEPILME614', name:'Adult T-cell leukemia/lymphoma', status:'completed', val:'—' },
+              { id:'NHL1a3', batch:'PHEPILME615', name:'Angioimmunoblastic T-cell lymphoma', status:'completed', val:'—' },
+              { id:'NHL1a4', batch:'PHEPILME616', name:'Extranodal NK/T-cell lymphoma', status:'completed', val:'—' },
+              { id:'NHL1a5', batch:'PHEPILME617', name:'Enteropathy-associated T-cell', status:'review', val:'Review pending' },
+              { id:'NHL1a6', batch:'PHEPILME613', name:'Monomorphic epitheliotropic', status:'completed', val:'—' },
+            ]
+          },
+          {
+            id:'NHL1b', batch:'PHEPILME647', name:'Peripheral T-cell lymphomas', status:'completed', val:'<15%',
+            deep:[
+              { id:'NHL1b1', batch:'PHEPILME618', name:'Anaplastic large cell lymphoma', status:'completed', val:'—' },
+              { id:'NHL1b2', batch:'PHEPILME619', name:'Primary cutaneous ALCL', status:'completed', val:'—' },
+              { id:'NHL1b3', batch:'PHEPILME620', name:'Systemic ALCL', status:'completed', val:'—' },
+              { id:'NHL1b4', batch:'PHEPILME621', name:'Breast implant-associated ALCL', status:'completed', val:'—' },
+            ]
+          },
+        ]
+      },
+      {
+        id:'NHL2', batch:'PHEPILME726', name:'B-cell lymphomas', status:'completed', val:'85% (2025)',
+        sats:[
+          { id:'NHL2a', batch:'PHEPILME618b', name:'Lymphoplasmacytic lymphoma', status:'completed', val:'1–2%', deep:[] },
+          { id:'NHL2b', batch:'PHEPILME619b', name:'Hairy cell leukemia', status:'completed', val:'—', deep:[] },
+          { id:'NHL2c', batch:'PHEPILME620b', name:'Primary CNS lymphoma', status:'completed', val:'1–2%', deep:[] },
+          { id:'NHL2d', batch:'PHEPILME621b', name:'Primary intraocular lymphoma', status:'completed', val:'—', deep:[] },
+          { id:'NHL2e', batch:'PHEPILME727', name:'Diffuse large B-cell lymphoma', status:'completed', val:'25–30% (2023)', deep:[] },
+          { id:'NHL2f', batch:'PHEPILME729', name:'Follicular lymphoma', status:'completed', val:'30% (2024)', deep:[] },
+          { id:'NHL2g', batch:'PHEPILME622b', name:'Chronic lymphocytic leukemia (CLL)', status:'completed', val:'—', deep:[] },
+          { id:'NHL2h', batch:'PHEPILME643', name:'Mantle cell lymphoma', status:'completed', val:'5%', deep:[] },
+          { id:'NHL2i', batch:'PHEPILME644', name:'Marginal zone lymphomas', status:'review', val:'Review pending', deep:[] },
+          { id:'NHL2j', batch:'PHEPILME645', name:'Burkitt lymphoma', status:'completed', val:'1–5%', deep:[] },
+        ]
+      }
+    ]
+  }
+};
+
+const W = Math.max(window.innerWidth - 80, 1200);
+const H = 920;
+const ROW_H = 46;
+const CORNER = 8;
+const GAP_H = 14;
+
+const svg = d3.select('#sankey-svg');
+const gContainer = d3.select('#sankey-g');
+
+const zoomBehavior = d3.zoom()
+  .scaleExtent([0.1, 4])
+  .on("zoom", (e) => {
+    gContainer.attr("transform", e.transform);
+  });
+
+svg.call(zoomBehavior);
+
+function zoomIn() {
+  svg.transition().duration(250).call(zoomBehavior.scaleBy, 1.3);
+}
+
+function zoomOut() {
+  svg.transition().duration(250).call(zoomBehavior.scaleBy, 0.77);
+}
+
+function fitToScreen() {
+  const bb = gContainer.node().getBBox();
+  if(!bb || bb.width === 0) return;
+  const svgNode = svg.node();
+  const width = svgNode.clientWidth || window.innerWidth;
+  const height = svgNode.clientHeight || window.innerHeight;
+  
+  const padding = 60;
+  const scale = Math.min((width - padding*2)/bb.width, (height - padding*2)/bb.height, 1);
+  
+  const tx = (width - bb.width*scale)/2 - bb.x*scale;
+  const ty = (height - bb.height*scale)/2 - bb.y*scale;
+  
+  svg.transition().duration(400).call(zoomBehavior.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
+}
+
+function renderSankey(cancerKey) {
+  const d = DATA[cancerKey];
+  if (!d) return;
+
+  gContainer.selectAll('*').remove();
+  const pInner = document.getElementById('panelInner');
+  if(pInner) pInner.innerHTML = `<div class="dp-empty">
+        <div class="dp-empty-icon">
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="#64748b" stroke-width="1.4" stroke-linecap="round">
+            <circle cx="11" cy="11" r="3.5"/><circle cx="11" cy="11" r="7.5" stroke-dasharray="2.5 2"/>
+            <circle cx="11" cy="11" r="10" stroke-width=".7" opacity=".4"/>
+          </svg>
+        </div>
+        <div class="dp-empty-title">Select a node</div>
+        <div class="dp-empty-body">Click any cancer type on the diagram to view epidemiological details.</div>
+      </div>`;
+
+  const nodes = [];
+  const links = [];
+  let recordCount = 1;
+
+  nodes.push({
+    id: d.root.id,
+    label: d.root.name,
+    value: d.root.ww_prev !== 'REVIEW' ? `WW Prevalence: ${d.root.ww_prev} (${d.root.ww_prev_yr || '2022'})` : `WW Prevalence: REVIEW`,
+    ww_inc: d.root.ww_inc,
+    us_inc: d.root.us_inc,
+    us_prev: d.root.us_prev,
+    us_prev_yr: d.root.us_prev_yr,
+    col: 0,
+    type: 'root',
+    batch: d.root.batch
+  });
+
+  d.spokes.forEach((spk, i) => {
+    recordCount++;
+    const type = i % 2 === 0 ? 'nk' : 'b';
+    nodes.push({
+      id: spk.id, label: spk.name, value: spk.val && spk.val !== '—' ? spk.val : '–%',
+      col: 1, type: spk.status === 'review' ? 'review' : type
+    });
+    links.push({ source: d.root.id, target: spk.id });
+
+    if (spk.sats) {
+      spk.sats.forEach(sat => {
+        recordCount++;
+        const subtype = type === 'nk' ? 'sub-nk' : 'sub-b';
+        nodes.push({
+          id: sat.id, label: sat.name, value: sat.val && sat.val !== '—' ? sat.val : '–%',
+          col: 2, type: sat.status === 'review' ? 'review' : subtype
+        });
+        links.push({ source: spk.id, target: sat.id });
+
+        if (sat.deep) {
+          sat.deep.forEach(dp => {
+            recordCount++;
+            nodes.push({
+              id: dp.id, label: dp.name, value: dp.val && dp.val !== '—' ? dp.val : '–%',
+              col: 3, type: dp.status === 'review' ? 'review' : subtype
+            });
+            links.push({ source: sat.id, target: dp.id });
+          });
+        }
+      });
+    }
+  });
+
+  document.getElementById('viewTitle').innerHTML = `${d.root.name} — Oncology Hierarchy`;
+  document.getElementById('viewSubtitle').innerHTML = `Batch No. ${d.root.batch} &nbsp;·&nbsp; EpiLume Sankey View &nbsp;·&nbsp; ${recordCount} Records`;
+  document.getElementById('footerBadge').innerHTML = `${recordCount} Records · Last Run: ${d.root.lastRun}`;
+
+  // Layout Nodes
+  const colGroups = {};
+  nodes.forEach(n => { if (!colGroups[n.col]) colGroups[n.col] = []; colGroups[n.col].push(n); });
+
+  const svgW = W;
+  const colXs = [60, svgW * 0.27, svgW * 0.54, svgW * 0.81];
+
+  Object.keys(colGroups).forEach(col => {
+    const group = colGroups[col];
+    const totalH = group.length * (ROW_H + GAP_H) - GAP_H;
+    const startY = Math.max(0, (H - totalH) / 2);
+    group.forEach((n, i) => {
+      n.x = colXs[+col];
+      n.y = startY + i * (ROW_H + GAP_H);
+      n.w = col == 0 ? 220 : col == 3 ? 210 : 230;
+      n.h = col == 0 ? ROW_H + 12 : ROW_H;
+      n.cx = n.x + n.w / 2;
+      n.cy = n.y + n.h / 2;
+    });
+  });
+
+  const nodeMap = {};
+  nodes.forEach(n => nodeMap[n.id] = n);
+
+  // svg.attr('width', W).attr('height', Math.max(H, nodes.length * 30));
+
+  const defs = gContainer.append('defs');
+
+  function mkGrad(id, col1, col2, x1='0%', x2='100%') {
+    const g = defs.append('linearGradient').attr('id', id).attr('x1', x1).attr('x2', x2).attr('y1', '0%').attr('y2', '0%');
+    g.append('stop').attr('offset', '0%').attr('stop-color', col1).attr('stop-opacity', 0.22);
+    g.append('stop').attr('offset', '100%').attr('stop-color', col2).attr('stop-opacity', 0.12);
+  }
+
+  mkGrad('link-nk-sub',  '#0ea5e9', '#0ea5e9');
+  mkGrad('link-b-sub',   '#10b981', '#10b981');
+  mkGrad('link-root-nk', '#8b5cf6', '#0ea5e9');
+  mkGrad('link-root-b',  '#8b5cf6', '#10b981');
+  mkGrad('link-rev',     '#f97316', '#f97316');
+
+  function linkGrad(src, tgt) {
+    if (src === d.root.id) {
+      if (nodeMap[tgt].type === 'nk') return 'url(#link-root-nk)';
+      return 'url(#link-root-b)';
+    }
+    const tn = nodeMap[tgt];
+    if (tn.type === 'review') return 'url(#link-rev)';
+    if (tn.type === 'sub-nk' || nodeMap[src].type === 'nk' || nodeMap[src].type === 'sub-nk') return 'url(#link-nk-sub)';
+    return 'url(#link-b-sub)';
+  }
+
+  function sankeyPath(s, t) {
+    const x1 = s.x + s.w, y1 = s.cy;
+    const x2 = t.x,       y2 = t.cy;
+    const mx = (x1 + x2) / 2;
+    return `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`;
+  }
+
+  const linkGroup = gContainer.append('g').attr('class', 'links');
+
+  links.forEach(lk => {
+    const s = nodeMap[lk.source], t = nodeMap[lk.target];
+    const path = sankeyPath(s, t);
+    const sType = nodeMap[lk.source].type;
+    const lw = sType === 'root' ? 4 : (sType === 'nk' || sType === 'b') ? 3 : 2;
+    const grad = linkGrad(lk.source, lk.target);
+
+    linkGroup.append('path')
+      .attr('d', path)
+      .attr('class', 'link')
+      .attr('stroke', grad)
+      .attr('stroke-width', lw + 4)
+      .attr('opacity', 0.5);
+
+    linkGroup.append('path')
+      .attr('d', path)
+      .attr('class', 'link glow-line')
+      .attr('stroke', t.type === 'review' ? '#f97316' : t.col >= 2 && nodeMap[lk.source].type?.includes('nk') ? '#0ea5e9' : '#10b981')
+      .attr('stroke-width', 1)
+      .attr('opacity', 0.3);
+  });
+
+  const nodeGroup = gContainer.append('g').attr('class', 'nodes');
+
+  nodes.forEach(n => {
+    const g = nodeGroup.append('g')
+      .attr('class', `node-${n.type}`)
+      .style('cursor', 'default');
+
+    g.append('rect')
+      .attr('x', n.x).attr('y', n.y)
+      .attr('width', n.w).attr('height', n.h)
+      .attr('rx', CORNER);
+
+    g.on('click', (e) => showDetailPanel(n));
+
+    const LABEL_X = n.x + 10;
+    const truncate = (str, maxW) => {
+      if (str.length * 6.2 <= maxW - 20) return str;
+      let s = str;
+      while (s.length > 10 && s.length * 6.2 > maxW - 20) s = s.slice(0, -1);
+      return s.trim() + '…';
+    };
+
+    const labelClass = {
+      root: 'node-label-primary',
+      nk: 'node-label-nk',
+      b: 'node-label-b',
+      'sub-nk': 'node-label-sub-nk',
+      'sub-b': 'node-label-sub-b',
+      review: 'node-label-review',
+    }[n.type] || 'node-label-sub-b';
+
+    const hasValue = n.value && n.value !== '–%';
+    const textY = hasValue ? n.y + 16 : n.y + n.h / 2 + 5;
+
+    g.append('text')
+      .attr('x', LABEL_X)
+      .attr('y', textY)
+      .attr('class', labelClass)
+      .text(truncate(n.label, n.w));
+
+    if (hasValue) {
+      const isHighlight = /\d/.test(n.value) && n.type !== 'review';
+      g.append('text')
+        .attr('x', LABEL_X)
+        .attr('y', n.y + 31)
+        .attr('class', isHighlight ? 'node-label-value-hi' : 'node-label-value')
+        .text(n.value);
+    }
+
+    if (n.type === 'review' || (n.value && n.value.toLowerCase().includes('review'))) {
+      g.append('rect')
+        .attr('x', n.x + n.w - 52)
+        .attr('y', n.y + 6)
+        .attr('width', 46)
+        .attr('height', 14)
+        .attr('rx', 3)
+        .attr('fill', '#f97316')
+        .attr('opacity', 0.18);
+      g.append('text')
+        .attr('x', n.x + n.w - 29)
+        .attr('y', n.y + 15)
+        .attr('text-anchor', 'middle')
+        .attr('class', 'review-badge')
+        .text('REVIEW');
+    }
+
+    if (n.col === 0) {
+      g.append('text')
+        .attr('x', LABEL_X)
+        .attr('y', n.y + 44)
+        .attr('class', 'node-label-value')
+        .style('fill', 'var(--text-muted)')
+        .text(`WW Incidence: ${n.ww_inc} · US: ${n.us_prev} (${n.us_prev_yr||'2022'})`);
+    }
+  });
+
+  gContainer.append('text')
+    .attr('x', W / 2)
+    .attr('y', Math.max(H, nodes.length * 30) - 10)
+    .attr('text-anchor', 'middle')
+    .attr('font-size', '10')
+    .attr('fill', 'var(--text-muted)')
+    .text('Hover links to highlight · All values represent epidemiology_Percentage (subtype share of parent)');
+
+  const allLinks = linkGroup.selectAll('.link');
+  allLinks.on('mouseover', function() {
+    allLinks.attr('opacity', 0.15);
+    d3.select(this).attr('opacity', 0.85);
+  }).on('mouseout', function() {
+    allLinks.attr('opacity', null);
+  });
+
+  setTimeout(() => fitToScreen(), 50);
+}
+
+function showDetailPanel(n) {
+  const p = document.getElementById('panelInner');
+  p.classList.add('fading');
+  setTimeout(() => {
+    if (n.value === '–%' && !n.ww_inc) {
+      p.innerHTML = `
+        <div class="dp-empty">
+          <div class="dp-empty-title">${n.label}</div>
+          <div class="dp-empty-body">No detailed epidemiological records available for this specific subtype currently.</div>
+        </div>`;
+    } else {
+      const incTxt = n.ww_inc ? `
+        <div class="dp-section">
+          <div class="dp-sec-title">Epidemiology Estimates</div>
+          <div class="dp-stat-grid">
+            <div class="dp-stat-card">
+              <div class="dp-sc-label">WW Incidence</div>
+              <div class="dp-sc-value">${n.ww_inc}</div>
+              <div class="dp-sc-year">2022</div>
+            </div>
+            <div class="dp-stat-card">
+              <div class="dp-sc-label">US Incidence</div>
+              <div class="dp-sc-value">${n.us_inc}</div>
+              <div class="dp-sc-year">${n.us_prev_yr||'2022'}</div>
+            </div>
+          </div>
+        </div>` : '';
+
+      p.innerHTML = `
+        <div class="dp-header">
+          <div class="dp-eyebrow">Level ${n.col} — ${n.type}</div>
+          <div class="dp-title">${n.label}</div>
+          <div class="dp-meta">
+            <span class="dp-batch">Batch: ${n.batch || '—'}</span>
+          </div>
+        </div>
+        <div class="dp-body">
+          <div class="dp-section">
+            <div class="dp-sec-title">Key Value</div>
+            <div class="dp-stat-grid">
+              <div class="dp-stat-card">
+                <div class="dp-sc-label">Value</div>
+                <div class="dp-sc-value">${n.value.replace('WW Prevalence: ','')}</div>
+              </div>
+            </div>
+          </div>
+          ${incTxt}
+        </div>`;
+    }
+    p.classList.remove('fading');
+  }, 180);
+}
+
+// Initial render
+renderSankey('nhl');
+</script>
+</body>
+</html>

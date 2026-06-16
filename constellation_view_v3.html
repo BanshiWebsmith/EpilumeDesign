@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EpiLume — Oncology Hub-Spoke View</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800&family=DM+Mono:wght@400;500&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:            #F7F8FC;
+  --surface:       #FFFFFF;
+  --surface-2:     #F2F4F9;
+  --surface-3:     #EAEDF5;
+  --border:        #E2E6F0;
+  --border-light:  #EDF0F7;
+  --text-1:        #0C1226;
+  --text-2:        #4A5270;
+  --text-3:        #8E96B0;
+  --accent:        #5C35C9;
+  --accent-2:      #7C5CDB;
+  --accent-glow:   rgba(92,53,201,0.13);
+  --accent-pale:   #EDE8FC;
+  --accent-pale-2: #F5F2FF;
+  --green:         #0A8A5A;
+  --green-pale:    #D4F5E9;
+  --amber:         #C47D0A;
+  --amber-pale:    #FEF3D0;
+  --gray-pale:     #EAEDF5;
+  --shadow-xs: 0 1px 3px rgba(12,18,38,0.06);
+  --shadow-sm: 0 2px 8px rgba(12,18,38,0.08), 0 1px 2px rgba(12,18,38,0.04);
+  --shadow-md: 0 6px 24px rgba(12,18,38,0.10), 0 2px 6px rgba(12,18,38,0.05);
+  --shadow-lg: 0 16px 48px rgba(92,53,201,0.16), 0 4px 12px rgba(12,18,38,0.08);
+  --shadow-xl: 0 24px 72px rgba(92,53,201,0.22), 0 8px 24px rgba(12,18,38,0.10);
+  --r-xl: 20px; --r-lg: 16px; --r-md: 12px; --r-sm: 8px; --r-xs: 6px;
+  --font: 'Inter', system-ui, sans-serif;
+  --mono: 'DM Mono', monospace;
+  --hub-w: 210px; --hub-h: 200px;
+  --spoke-w: 170px; --sat-w: 148px; --l3-w: 136px;
+}
+
+html, body { width:100%; height:100%; }
+body { font-family: var(--font); background: var(--bg); color: var(--text-1); display:flex; flex-direction:column; overflow:hidden; }
+
+/* HEADER */
+.header { height:58px; flex-shrink:0; background:var(--surface); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:0 28px; z-index:200; box-shadow:var(--shadow-xs); }
+.h-left { display:flex; align-items:center; gap:14px; }
+.h-right { display:flex; align-items:center; gap:10px; }
+.logomark { width:34px; height:34px; background:linear-gradient(135deg,var(--accent) 0%,var(--accent-2) 100%); border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 8px var(--accent-glow); }
+.logomark svg { width:18px; height:18px; }
+.app-name { font-size:15px; font-weight:700; letter-spacing:-.02em; color:var(--text-1); }
+.app-tagline { font-size:11px; font-weight:400; color:var(--text-3); margin-top:1px; }
+.divider-v { width:1px; height:20px; background:var(--border); }
+.select-label { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.07em; color:var(--text-3); }
+.sel-wrap { position:relative; display:flex; align-items:center; }
+.cancer-sel { appearance:none; background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-md); padding:7px 34px 7px 13px; font:500 13px/1 var(--font); color:var(--text-1); cursor:pointer; outline:none; min-width:200px; transition:border-color .18s,box-shadow .18s; }
+.cancer-sel:hover { border-color:var(--accent); }
+.cancer-sel:focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-pale); }
+.sel-arrow { position:absolute; right:10px; pointer-events:none; color:var(--text-3); }
+.icon-btn { width:34px; height:34px; border:1px solid var(--border); border-radius:var(--r-sm); background:var(--surface-2); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-3); transition:border-color .18s,color .18s,background .18s; }
+.icon-btn:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-pale-2); }
+.rec-pill { background:var(--accent-pale); color:var(--accent); font:600 12px/1 var(--font); padding:5px 12px; border-radius:20px; }
+
+/* BODY */
+.body-wrap { flex:1; display:flex; overflow:hidden; position:relative; }
+.canvas-wrap { flex:1; position:relative; overflow:hidden; cursor:grab; }
+.canvas-wrap:active { cursor:grabbing; }
+.canvas-bg { position:absolute; inset:0; background-image: radial-gradient(ellipse 55% 45% at 50% 50%,rgba(92,53,201,.05) 0%,transparent 70%), linear-gradient(var(--border-light) 1px,transparent 1px), linear-gradient(90deg,var(--border-light) 1px,transparent 1px); background-size:100% 100%,28px 28px,28px 28px; pointer-events:none; }
+#viewport { position:absolute; transform-origin:0 0; will-change:transform; }
+#connSvg { position:absolute; top:0; left:0; pointer-events:none; overflow:visible; }
+
+/* NODES */
+.node { position:absolute; transform:translate(-50%,-50%); cursor:pointer; user-select:none; transition:filter .2s; }
+.node:hover { filter:drop-shadow(0 6px 18px rgba(92,53,201,.22)); z-index:30 !important; }
+.node.selected { z-index:40 !important; }
+
+/* HUB */
+.hub-card { width:var(--hub-w); background:var(--surface); border:2px solid var(--accent); border-radius:var(--r-xl); padding:18px 20px; box-shadow:var(--shadow-xl); position:relative; overflow:hidden; transition:transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .25s; }
+.hub-card::before { content:''; position:absolute; inset:0; background:linear-gradient(135deg,var(--accent-pale) 0%,transparent 55%); border-radius:calc(var(--r-xl) - 2px); pointer-events:none; }
+.hub-card:hover { transform:scale(1.025); }
+.node.selected .hub-card { box-shadow:0 0 0 4px var(--accent-pale),var(--shadow-xl); }
+.hub-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:5px; }
+.hub-batch { font:500 9px/1 var(--mono); color:var(--accent); letter-spacing:.08em; opacity:.75; }
+.hub-name { font-size:15px; font-weight:800; letter-spacing:-.025em; color:var(--text-1); margin-bottom:12px; line-height:1.2; }
+.stat-grid { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
+.stat-cell { background:var(--surface-2); border:1px solid var(--border-light); border-radius:var(--r-sm); padding:7px 9px; }
+.stat-lbl { font-size:8.5px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--text-3); margin-bottom:3px; }
+.stat-val { font-size:11.5px; font-weight:700; color:var(--text-1); line-height:1.25; }
+.stat-yr { font-size:9px; font-weight:400; color:var(--text-3); }
+.stat-review { font-size:11px; font-weight:700; color:var(--amber); }
+.hub-foot { margin-top:11px; display:flex; align-items:center; justify-content:space-between; }
+.run-txt { font:400 9px/1 var(--mono); color:var(--text-3); }
+
+/* SPOKE L1 */
+.spoke-card { width:var(--spoke-w); background:var(--surface); border:1.5px solid var(--border); border-radius:var(--r-lg); padding:12px 14px; box-shadow:var(--shadow-sm); position:relative; overflow:hidden; transition:transform .22s cubic-bezier(.34,1.56,.64,1),box-shadow .22s,border-color .18s; }
+.spoke-card::after { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--accent); border-radius:3px 0 0 3px; opacity:0; transition:opacity .2s; }
+.node:hover .spoke-card::after { opacity:1; }
+.node.selected .spoke-card { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-pale),var(--shadow-md); }
+.node.selected .spoke-card::after { opacity:1; }
+.spoke-card:hover { transform:scale(1.04); }
+.spk-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:2px; }
+.spk-batch { font:500 8.5px/1 var(--mono); color:var(--accent); letter-spacing:.07em; opacity:.65; }
+.spk-name { font-size:11.5px; font-weight:700; color:var(--text-1); line-height:1.3; margin-bottom:2px; letter-spacing:-.01em; }
+.spk-parent { font-size:9.5px; color:var(--text-3); margin-bottom:8px; }
+.val-block { background:var(--accent-pale-2); border:1px solid rgba(92,53,201,.12); border-radius:var(--r-xs); padding:7px 9px; text-align:center; margin-bottom:7px; }
+.val-lbl { font-size:7.5px; font-weight:600; text-transform:uppercase; letter-spacing:.09em; color:var(--accent); margin-bottom:2px; opacity:.7; }
+.val-num { font-size:17px; font-weight:800; color:var(--accent); line-height:1; letter-spacing:-.025em; }
+.val-dash { opacity:.35; }
+.spk-foot { display:flex; align-items:center; justify-content:space-between; }
+
+/* SAT L2 */
+.sat-card { width:var(--sat-w); background:var(--surface); border:1px solid var(--border-light); border-radius:var(--r-md); padding:9px 11px; box-shadow:var(--shadow-xs); position:relative; overflow:hidden; transition:transform .22s cubic-bezier(.34,1.56,.64,1),box-shadow .22s,border-color .18s; }
+.sat-card::after { content:''; position:absolute; left:0; top:0; bottom:0; width:2.5px; background:var(--accent-2); border-radius:2px 0 0 2px; opacity:0; transition:opacity .2s; }
+.node:hover .sat-card::after { opacity:1; }
+.node.selected .sat-card { border-color:var(--accent-2); box-shadow:0 0 0 3px rgba(124,92,219,.15),var(--shadow-sm); }
+.node.selected .sat-card::after { opacity:1; }
+.sat-card:hover { transform:scale(1.05); }
+.sat-batch { font:500 7.5px/1 var(--mono); color:var(--accent-2); letter-spacing:.07em; opacity:.6; margin-bottom:2px; }
+.sat-name { font-size:10.5px; font-weight:600; color:var(--text-1); line-height:1.3; margin-bottom:1px; letter-spacing:-.01em; }
+.sat-parent { font-size:8.5px; color:var(--text-3); margin-bottom:6px; }
+.sat-val-block { background:#F7F4FF; border:1px solid rgba(124,92,219,.1); border-radius:5px; padding:5px 7px; text-align:center; margin-bottom:5px; }
+.sat-val-lbl { font-size:7px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--accent-2); margin-bottom:1px; opacity:.7; }
+.sat-val-num { font-size:14px; font-weight:800; color:var(--accent-2); line-height:1; }
+.sat-run { font:400 8px/1 var(--mono); color:var(--text-3); }
+
+/* L3 deep satellite */
+.l3-card { width:var(--l3-w); background:var(--surface); border:1px solid #EDE8FC; border-radius:var(--r-sm); padding:7px 9px; box-shadow:none; position:relative; overflow:hidden; transition:transform .2s cubic-bezier(.34,1.56,.64,1),box-shadow .2s,border-color .18s; }
+.l3-card::after { content:''; position:absolute; left:0; top:0; bottom:0; width:2px; background:#A78BFA; border-radius:2px 0 0 2px; opacity:0; transition:opacity .2s; }
+.node:hover .l3-card::after { opacity:1; }
+.node.selected .l3-card { border-color:#A78BFA; box-shadow:0 0 0 2px rgba(167,139,250,.2); }
+.node.selected .l3-card::after { opacity:1; }
+.l3-card:hover { transform:scale(1.06); }
+.l3-batch { font:500 7px/1 var(--mono); color:#A78BFA; letter-spacing:.06em; opacity:.6; margin-bottom:1px; }
+.l3-name { font-size:9.5px; font-weight:600; color:var(--text-1); line-height:1.3; margin-bottom:1px; }
+.l3-parent { font-size:7.5px; color:var(--text-3); margin-bottom:5px; }
+.l3-val-block { background:#FAF8FF; border:1px solid rgba(167,139,250,.12); border-radius:4px; padding:4px 6px; text-align:center; margin-bottom:4px; }
+.l3-val-lbl { font-size:6.5px; font-weight:600; text-transform:uppercase; letter-spacing:.07em; color:#A78BFA; margin-bottom:1px; opacity:.7; }
+.l3-val-num { font-size:12px; font-weight:800; color:#7C5CDB; line-height:1; }
+.l3-run { font:400 7px/1 var(--mono); color:var(--text-3); }
+
+/* BADGE */
+.badge { display:inline-flex; align-items:center; gap:3px; padding:2.5px 7px; border-radius:20px; font-size:8px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; flex-shrink:0; }
+.badge-completed  { background:var(--green-pale); color:var(--green); }
+.badge-review     { background:var(--amber-pale); color:var(--amber); }
+.badge-processing { background:var(--gray-pale); color:var(--text-3); }
+.badge-dot { width:4px; height:4px; border-radius:50%; background:currentColor; }
+
+/* GROUP LABELS */
+.group-label { position:absolute; transform:translate(-50%,-50%); pointer-events:none; user-select:none; z-index:2; }
+.group-label-inner { background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:4px 12px; font-size:10px; font-weight:600; color:var(--text-2); letter-spacing:.03em; box-shadow:var(--shadow-xs); white-space:nowrap; }
+
+/* PULSE */
+.pulse-ring { position:absolute; border-radius:var(--r-xl); border:1px solid var(--accent); pointer-events:none; transform:translate(-50%,-50%); animation:pulse-out 2.8s ease-out infinite; }
+@keyframes pulse-out { 0%{opacity:.5;transform:translate(-50%,-50%) scale(1)} 100%{opacity:0;transform:translate(-50%,-50%) scale(1.55)} }
+
+/* CANVAS CONTROLS */
+.canvas-controls { position:absolute; bottom:24px; right:24px; display:flex; flex-direction:column; gap:6px; z-index:100; }
+.ctrl-btn { width:34px; height:34px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-sm); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:16px; color:var(--text-2); box-shadow:var(--shadow-sm); transition:border-color .18s,color .18s; user-select:none; flex-shrink:0; }
+.ctrl-btn:hover { border-color:var(--accent); color:var(--accent); }
+.zoom-hint { position:absolute; top:18px; left:50%; transform:translateX(-50%); font-size:11px; color:var(--text-3); background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:4px 14px; box-shadow:var(--shadow-xs); pointer-events:none; z-index:100; white-space:nowrap; }
+
+/* LEGEND */
+.legend { position:absolute; bottom:24px; left:24px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-md); padding:10px 16px; display:flex; flex-direction:column; gap:6px; box-shadow:var(--shadow-sm); z-index:100; }
+.legend-title { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--text-3); margin-bottom:2px; }
+.legend-item { display:flex; align-items:center; gap:8px; }
+.legend-shape { flex-shrink:0; }
+.legend-lbl { font-size:11px; color:var(--text-2); font-weight:500; }
+.legend-sub { font-size:10px; color:var(--text-3); }
+
+/* DETAIL PANEL */
+.detail-panel { width:360px; flex-shrink:0; background:var(--surface); border-left:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; }
+.dp-header { padding:22px 24px 18px; border-bottom:1px solid var(--border-light); flex-shrink:0; }
+.dp-eyebrow { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:var(--accent); margin-bottom:7px; }
+.dp-title { font-size:20px; font-weight:800; letter-spacing:-.03em; line-height:1.2; margin-bottom:6px; }
+.dp-meta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:5px; }
+.dp-batch { font:400 10.5px/1 var(--mono); color:var(--text-3); }
+.dp-body { flex:1; overflow-y:auto; padding:18px 24px; }
+.dp-body::-webkit-scrollbar { width:3px; }
+.dp-body::-webkit-scrollbar-track { background:transparent; }
+.dp-body::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+.dp-section { margin-bottom:22px; }
+.dp-sec-title { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:var(--text-3); padding-bottom:8px; border-bottom:1px solid var(--border-light); margin-bottom:11px; }
+.dp-stat-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.dp-stat-card { background:var(--surface-2); border:1px solid var(--border-light); border-radius:var(--r-sm); padding:12px 14px; position:relative; overflow:hidden; }
+.dp-stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--accent),var(--accent-2)); opacity:.45; }
+.dp-sc-label { font-size:9px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--text-3); margin-bottom:5px; }
+.dp-sc-value { font-size:18px; font-weight:800; letter-spacing:-.03em; color:var(--text-1); line-height:1; }
+.dp-sc-year { font-size:10px; color:var(--text-3); font-weight:400; margin-top:1px; }
+.dp-sc-review { font-size:13px; font-weight:700; color:var(--amber); }
+.pct-row { margin-bottom:6px; }
+.pct-row-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
+.pct-row-lbl { font-size:11px; font-weight:500; color:var(--text-2); }
+.pct-row-val { font-size:12px; font-weight:800; color:var(--accent); }
+.pct-track { height:5px; background:var(--surface-3); border-radius:5px; overflow:hidden; }
+.pct-fill { height:100%; background:linear-gradient(90deg,var(--accent),var(--accent-2)); border-radius:5px; transition:width .8s cubic-bezier(.4,0,.2,1); }
+.child-list { display:flex; flex-direction:column; gap:6px; }
+.child-row { display:flex; align-items:center; gap:10px; padding:8px 12px; background:var(--surface-2); border:1px solid var(--border-light); border-radius:var(--r-sm); cursor:pointer; transition:border-color .18s,background .18s; }
+.child-row:hover { border-color:var(--accent); background:var(--accent-pale-2); }
+.child-dot { width:7px; height:7px; border-radius:50%; background:var(--accent); flex-shrink:0; opacity:.55; }
+.child-name { font-size:11.5px; font-weight:500; color:var(--text-1); flex:1; line-height:1.3; }
+.child-val { font-size:11.5px; font-weight:700; color:var(--accent); white-space:nowrap; }
+.dp-meta-row { display:flex; align-items:center; justify-content:space-between; padding:9px 12px; background:var(--surface-2); border-radius:var(--r-sm); }
+.dp-meta-k { font-size:11px; color:var(--text-3); font-weight:500; }
+.dp-meta-v { font:500 11px/1 var(--mono); color:var(--text-1); }
+.dp-footer { flex-shrink:0; padding:14px 24px; border-top:1px solid var(--border-light); display:flex; gap:8px; }
+.btn { flex:1; padding:9px 14px; border-radius:var(--r-sm); font:600 12px/1 var(--font); cursor:pointer; border:none; letter-spacing:-.01em; transition:all .18s; }
+.btn-primary { background:var(--accent); color:#fff; }
+.btn-primary:hover { background:#4a28b2; }
+.btn-secondary { background:var(--surface-2); color:var(--text-2); border:1px solid var(--border); }
+.btn-secondary:hover { border-color:var(--accent); color:var(--accent); }
+.btn-amber { background:var(--amber-pale); color:var(--amber); border:1px solid #F9D97A; }
+.btn-amber:hover { background:#FDE68A; }
+.dp-empty { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 32px; gap:14px; text-align:center; }
+.dp-empty-icon { width:54px; height:54px; border-radius:16px; background:var(--surface-2); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.dp-empty-title { font-size:15px; font-weight:700; color:var(--text-2); }
+.dp-empty-body { font-size:13px; color:var(--text-3); line-height:1.6; max-width:200px; }
+.fade-target { transition:opacity .18s ease; }
+.fading { opacity:0; }
+@keyframes nodeIn { from{opacity:0;transform:translate(-50%,-50%) scale(.82)} to{opacity:1;transform:translate(-50%,-50%) scale(1)} }
+.node { animation:nodeIn .45s cubic-bezier(.34,1.56,.64,1) both; }
+
+.focus-toggle-wrap { display:flex; align-items:center; gap:8px; margin-right:4px; }
+.toggle-lbl { font-size:12px; font-weight:600; color:var(--text-2); }
+.switch { position:relative; display:inline-block; width:32px; height:18px; }
+.switch input { opacity:0; width:0; height:0; }
+.slider { position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:var(--border); transition:.3s; border-radius:18px; }
+.slider:before { position:absolute; content:""; height:14px; width:14px; left:2px; bottom:2px; background-color:white; transition:.3s; border-radius:50%; box-shadow:var(--shadow-xs); }
+input:checked + .slider { background-color:var(--accent); }
+input:checked + .slider:before { transform:translateX(14px); }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="h-left">
+    <div class="logomark">
+      <svg viewBox="0 0 18 18" fill="none">
+        <circle cx="9" cy="9" r="2.8" fill="#fff"/>
+        <circle cx="9" cy="9" r="5.5" stroke="#fff" stroke-width="1.1" stroke-dasharray="2.2 1.8"/>
+        <circle cx="9" cy="9" r="8" stroke="#fff" stroke-width=".6" opacity=".4"/>
+      </svg>
+    </div>
+    <div>
+      <div class="app-name">EpiLume</div>
+      <div class="app-tagline">Oncology Hub-Spoke View</div>
+    </div>
+    <div class="divider-v"></div>
+    <span class="rec-pill" id="recPill">— Records</span>
+  </div>
+  <div class="h-right">
+    <div class="focus-toggle-wrap" title="Auto-focus and zoom when selecting a node">
+      <label class="switch">
+        <input type="checkbox" id="autoFocusToggle">
+        <span class="slider"></span>
+      </label>
+      <span class="toggle-lbl">Auto-focus</span>
+    </div>
+    <div class="divider-v"></div>
+    <span class="select-label">Main Oncology</span>
+    <div class="sel-wrap">
+      <select class="cancer-sel" id="cancerSel" onchange="switchCancer(this.value)">
+        <option value="bladder">Bladder cancer</option>
+        <option value="lung">Lung cancer</option>
+        <option value="prostate">Prostate cancer</option>
+        <option value="thyroid">Thyroid cancer</option>
+        <option value="nhl">Non-Hodgkin's lymphoma</option>
+      </select>
+      <svg class="sel-arrow" width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <path d="M3.5 5.5L7 9L10.5 5.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <button class="icon-btn" title="Fit to screen" onclick="fitToScreen()">
+      <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+        <path d="M1 4.5V1.5H4"/><path d="M14 4.5V1.5H11"/>
+        <path d="M1 10.5V13.5H4"/><path d="M14 10.5V13.5H11"/>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<div class="body-wrap">
+  <div class="canvas-wrap" id="canvasWrap">
+    <div class="canvas-bg"></div>
+    <div class="zoom-hint">Scroll to zoom · Drag to pan · Click nodes to explore</div>
+    <div id="viewport">
+      <svg id="connSvg"></svg>
+      <div id="nodesLayer"></div>
+    </div>
+    <div class="legend">
+      <div class="legend-title">Legend</div>
+      <div class="legend-item">
+        <svg class="legend-shape" width="22" height="16" viewBox="0 0 22 16"><rect x="1" y="1" width="20" height="14" rx="4" fill="none" stroke="#5C35C9" stroke-width="2"/></svg>
+        <div><div class="legend-lbl">Hub — Main cancer</div><div class="legend-sub">Root · Full statistics</div></div>
+      </div>
+      <div class="legend-item">
+        <svg class="legend-shape" width="22" height="16" viewBox="0 0 22 16"><rect x="1" y="1" width="20" height="14" rx="3" fill="none" stroke="#5C35C9" stroke-width="1.5"/><rect x="1" y="1" width="3" height="14" rx="2" fill="#5C35C9"/></svg>
+        <div><div class="legend-lbl">Spoke — L1 Subtype</div><div class="legend-sub">Direct child of hub</div></div>
+      </div>
+      <div class="legend-item">
+        <svg class="legend-shape" width="22" height="16" viewBox="0 0 22 16"><rect x="1" y="1" width="20" height="14" rx="3" fill="none" stroke="#7C5CDB" stroke-width="1"/><rect x="1" y="1" width="2.5" height="14" rx="2" fill="#7C5CDB" opacity=".7"/></svg>
+        <div><div class="legend-lbl">Satellite — L2 Sub-subtype</div><div class="legend-sub">Child of a spoke</div></div>
+      </div>
+      <div class="legend-item">
+        <svg class="legend-shape" width="22" height="16" viewBox="0 0 22 16"><rect x="1" y="1" width="20" height="14" rx="2" fill="none" stroke="#A78BFA" stroke-width="1" stroke-dasharray="3 2"/><rect x="1" y="1" width="2" height="14" rx="2" fill="#A78BFA" opacity=".5"/></svg>
+        <div><div class="legend-lbl">Deep — L3 Sub-sub-subtype</div><div class="legend-sub">Deepest child node</div></div>
+      </div>
+    </div>
+    <div class="canvas-controls">
+      <div class="ctrl-btn" onclick="zoom(1.18)" title="Zoom in">+</div>
+      <div class="ctrl-btn" onclick="zoom(.847)" title="Zoom out">−</div>
+      <div class="ctrl-btn" onclick="fitToScreen()" title="Fit" style="font-size:12px">⊡</div>
+    </div>
+  </div>
+
+  <div class="detail-panel" id="detailPanel">
+    <div id="panelInner" class="fade-target">
+      <div class="dp-empty">
+        <div class="dp-empty-icon">
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="#8E96B0" stroke-width="1.4" stroke-linecap="round">
+            <circle cx="11" cy="11" r="3.5"/><circle cx="11" cy="11" r="7.5" stroke-dasharray="2.5 2"/>
+            <circle cx="11" cy="11" r="10" stroke-width=".7" opacity=".4"/>
+          </svg>
+        </div>
+        <div class="dp-empty-title">Select a node</div>
+        <div class="dp-empty-body">Click any cancer type on the diagram to view epidemiological details.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const DATA = {
+  bladder:{
+    root:{ id:'BL0', batch:'PHEPILME701', name:'Bladder cancer', status:'completed',
+      ww_prev:'1,950,315', ww_prev_yr:'2022', ww_inc:'614,298', ww_inc_yr:'',
+      us_prev:'744,039', us_prev_yr:'', us_inc:'84,530', us_inc_yr:'2026', lastRun:'2026-03-25' },
+    spokes:[
+      { id:'BL1', batch:'PHEPILME442', name:'Non-Muscle Invasive Bladder Cancer', parent:'Bladder cancer', status:'completed', val:'75%', valN:75, lastRun:'2026-02-23', group:'Based on Invasion', sats:[] },
+      { id:'BL2', batch:'PHEPILME703', name:'Muscle Invasive Bladder Cancer', parent:'Bladder cancer', status:'completed', val:'25% (2024)', valN:25, lastRun:'2026-03-05', group:'Based on Invasion', sats:[] },
+      { id:'BL3', batch:'PHEPILME444', name:'Metastatic Bladder Adenocarcinoma', parent:'Bladder cancer', status:'completed', val:'6%', valN:6, lastRun:'2026-02-23', group:'Based on Invasion', sats:[] },
+      { id:'BL4', batch:'PHEPILME704', name:'Urothelial Carcinoma Adenocarcinoma', parent:'Bladder cancer', status:'completed', val:'2% (2025)', valN:2, lastRun:'2026-03-25', group:'Based on Cell Site', sats:[] },
+      { id:'BL5', batch:'PHEPILME743', name:'Squamous Cell Carcinoma', parent:'Bladder cancer', status:'completed', val:'2% to 7% (2025)', valN:4.5, lastRun:'2026-03-25', group:'Based on Cell Site', sats:[] },
+      { id:'BL6', batch:'PHEPILME744', name:'Sarcomas', parent:'Bladder cancer', status:'completed', val:'—', valN:0, lastRun:'2026-03-25', group:'Based on Cell Site', sats:[] },
+      { id:'BL7', batch:'PHEPILME705', name:'Grade 1: Low Grade', parent:'Bladder cancer', status:'completed', val:'—', valN:0, lastRun:'2026-03-05', group:'Based on Grade', sats:[] },
+      { id:'BL8', batch:'PHEPILME745', name:'Grade 2: Intermediate Grade', parent:'Bladder cancer', status:'completed', val:'—', valN:0, lastRun:'2026-03-25', group:'Based on Grade', sats:[] },
+      { id:'BL9', batch:'PHEPILME746', name:'Grade 3: High Grade', parent:'Bladder cancer', status:'completed', val:'—', valN:0, lastRun:'2026-03-25', group:'Based on Grade', sats:[] },
+    ]
+  },
+  lung:{
+    root:{ id:'LU0', batch:'PHEPILME367', name:'Lung cancer', status:'completed',
+      ww_prev:'2,480,675', ww_prev_yr:'2022', ww_inc:'2,480,675', ww_inc_yr:'2022',
+      us_prev:'635,547', us_prev_yr:'', us_inc:'226,650', us_inc_yr:'2025', lastRun:'2026-02-16' },
+    spokes:[
+      { id:'LU1', batch:'PHEPILME403', name:'Small Cell Lung Cancer', parent:'Lung cancer', status:'completed', val:'12%', valN:12, lastRun:'2026-02-23',
+        sats:[
+          { id:'LU1a', batch:'PHEPILME404', name:'Small Cell', parent:'Small Cell Lung Cancer', status:'completed', val:'12%', valN:12, lastRun:'2026-02-23', deep:[] },
+          { id:'LU1b', batch:'PHEPILME488', name:'Combined Cell', parent:'Small Cell Lung Cancer', status:'completed', val:'—', valN:0, lastRun:'2026-09-24', deep:[] },
+        ]},
+      { id:'LU2', batch:'PHEPILME406', name:'Non-Small Cell', parent:'Lung cancer', status:'completed', val:'84%', valN:84, lastRun:'2026-02-23',
+        sats:[
+          { id:'LU2a', batch:'PHEPILME407', name:'Adenocarcinoma', parent:'Non-Small Cell', status:'completed', val:'45%', valN:45, lastRun:'2026-02-23', deep:[] },
+          { id:'LU2b', batch:'PHEPILME408', name:'Squamous Cell Carcinoma', parent:'Non-Small Cell', status:'completed', val:'30%', valN:30, lastRun:'2026-02-23', deep:[] },
+          { id:'LU2c', batch:'PHEPILME409', name:'Large Cell Carcinoma', parent:'Non-Small Cell', status:'completed', val:'8% (men), 6% (women)', valN:7, lastRun:'2025-02-23', deep:[] },
+          { id:'LU2d', batch:'PHEPILME725', name:'Adenosquamous Carcinoma', parent:'Non-Small Cell', status:'completed', val:'1.1% (2024)', valN:1.1, lastRun:'2026-03-20', deep:[] },
+          { id:'LU2e', batch:'PHEPILME411', name:'Sarcomatoid Carcinoma', parent:'Non-Small Cell', status:'completed', val:'0.1–0.4%', valN:0.25, lastRun:'2026-02-23', deep:[] },
+        ]},
+      { id:'LU3', batch:'PHEPILME412', name:'Pulmonary Sarcomatoid Carcinoma', parent:'Lung cancer', status:'completed', val:'0.1–0.4%', valN:0.25, lastRun:'2026-02-23', sats:[] },
+      { id:'LU4', batch:'PHEPILME724', name:'Giant-Cell Carcinoma of the Lung', parent:'Lung cancer', status:'completed', val:'1% (2023)', valN:1, lastRun:'2026-03-25', sats:[] },
+    ]
+  },
+  prostate:{
+    root:{ id:'PR0', batch:'PHEPILME414', name:'Prostate cancer', status:'completed',
+      ww_prev:'5,033,178', ww_prev_yr:'2022', ww_inc:'1,467,854', ww_inc_yr:'2022',
+      us_prev:'3,518,978', us_prev_yr:'2022', us_inc:'333,830', us_inc_yr:'2026', lastRun:'2026-02-23' },
+    spokes:[
+      { id:'PR1', batch:'PHEPILME735', name:'Adenocarcinoma', parent:'Prostate cancer', status:'completed', val:'95% (2026)', valN:95, lastRun:'2026-03-25',
+        sats:[
+          { id:'PR1a', batch:'PHEPILME424', name:'Acinar Adenocarcinoma', parent:'Adenocarcinoma', status:'completed', val:'90–95%', valN:92, lastRun:'2026-02-23', deep:[] },
+          { id:'PR1b', batch:'PHEPILME736', name:'Prostatic Ductal Adenocarcinoma', parent:'Adenocarcinoma', status:'completed', val:'3–5% (2024)', valN:4, lastRun:'2026-03-25', deep:[] },
+        ]},
+      { id:'PR2', batch:'PHEPILME418', name:'Neuroendocrine Prostate Cancer', parent:'Prostate cancer', status:'completed', val:'1%', valN:1, lastRun:'2026-02-23', sats:[] },
+      { id:'PR3', batch:'PHEPILME419', name:'Squamous Cell Prostate Cancer', parent:'Prostate cancer', status:'completed', val:'<1%', valN:0.5, lastRun:'2026-02-23', sats:[] },
+      { id:'PR4', batch:'PHEPILME830', name:'Transitional Cell Prostate Cancer', parent:'Prostate cancer', status:'completed', val:'—', valN:0, lastRun:'2026-03-26', sats:[] },
+      { id:'PR5', batch:'PHEPILME421', name:'Small Cell Prostate Cancer', parent:'Prostate cancer', status:'completed', val:'<1%', valN:0.5, lastRun:'2026-02-23',
+        sats:[
+          { id:'PR5a', batch:'PHEPILME422', name:'Sarcoma', parent:'Small Cell Prostate Cancer', status:'completed', val:'0.7%', valN:0.7, lastRun:'2026-02-23', deep:[] },
+          { id:'PR5b', batch:'PHEPILME423', name:'Lymphoma', parent:'Small Cell Prostate Cancer', status:'completed', val:'0.1%', valN:0.1, lastRun:'2026-02-23', deep:[] },
+        ]},
+    ]
+  },
+  thyroid:{
+    root:{ id:'TH0', batch:'PHEPILME855', name:'Thyroid cancer', status:'review',
+      ww_prev:'REVIEW', ww_prev_yr:'', ww_inc:'REVIEW', ww_inc_yr:'',
+      us_prev:'REVIEW', us_prev_yr:'', us_inc:'REVIEW', us_inc_yr:'', lastRun:'2026-03-30' },
+    spokes:[
+      { id:'TH1', batch:'PHEPILME520', name:'Differentiated Thyroid Cancer', parent:'Thyroid cancer', status:'completed', val:'~90%', valN:90, lastRun:'2026-02-24',
+        sats:[
+          { id:'TH1a', batch:'PHEPILME521', name:'Papillary Thyroid Cancer', parent:'Differentiated Thyroid Cancer', status:'completed', val:'80–85%', valN:82, lastRun:'2026-02-24', deep:[] },
+          { id:'TH1b', batch:'PHEPILME522', name:'Follicular Thyroid Cancer', parent:'Differentiated Thyroid Cancer', status:'completed', val:'10–15%', valN:12, lastRun:'2026-02-24', deep:[] },
+          { id:'TH1c', batch:'PHEPILME523', name:'Hürthle Cell Cancer', parent:'Differentiated Thyroid Cancer', status:'completed', val:'—', valN:0, lastRun:'2026-02-24', deep:[] },
+        ]},
+      { id:'TH2', batch:'PHEPILME525', name:'Undifferentiated Thyroid Cancer', parent:'Thyroid cancer', status:'completed', val:'2–3%', valN:2.5, lastRun:'2026-02-24',
+        sats:[
+          { id:'TH2a', batch:'PHEPILME526', name:'Anaplastic Thyroid Cancer (ATC)', parent:'Undifferentiated Thyroid Cancer', status:'completed', val:'2–3%', valN:2.5, lastRun:'2026-02-24', deep:[] },
+        ]},
+      { id:'TH3', batch:'PHEPILME527', name:'Medullary Thyroid Cancer', parent:'Thyroid cancer', status:'completed', val:'<5%', valN:3, lastRun:'2026-02-24', sats:[] },
+    ]
+  },
+  nhl:{
+    root:{ id:'NHL0', batch:'PHEPILME654', name:"Non-Hodgkin's lymphoma", status:'completed',
+      ww_prev:'1,738,516', ww_prev_yr:'2022', ww_inc:'553,389 new cases', ww_inc_yr:'',
+      us_prev:'835,496 (2022)', us_prev_yr:'', us_inc:'80,350 estimated new cases', us_inc_yr:'', lastRun:'2026-02-23' },
+    spokes:[
+      {
+        id:'NHL1', batch:'PHEPILME607', name:'Natural Killer/T-cell lymphomas', parent:"Non-Hodgkin's lymphoma",
+        status:'completed', val:'—', valN:0, lastRun:'2026-03-26',
+        sats:[
+          {
+            id:'NHL1a', batch:'PHEPILME646', name:'T-lymphoblastic lymphoma/leukemia', parent:'Natural Killer/T-cell lymphomas',
+            status:'completed', val:'1%', valN:1, lastRun:'2026-02-23',
+            deep:[
+              { id:'NHL1a1', batch:'PHEPILME611', name:'Cutaneous T-cell lymphomas', parent:'T-lymphoblastic lymphoma/leukemia', status:'completed', val:'1%', valN:1, lastRun:'2026-03-31' },
+              { id:'NHL1a2', batch:'PHEPILME614', name:'Adult T-cell leukemia/lymphoma', parent:'T-lymphoblastic lymphoma/leukemia', status:'completed', val:'—', valN:0, lastRun:'2026-03-26' },
+              { id:'NHL1a3', batch:'PHEPILME615', name:'Angioimmunoblastic T-cell lymphoma', parent:'T-lymphoblastic lymphoma/leukemia', status:'completed', val:'—', valN:0, lastRun:'2026-03-26' },
+              { id:'NHL1a4', batch:'PHEPILME616', name:'Extranodal NK/T-cell lymphoma', parent:'T-lymphoblastic lymphoma/leukemia', status:'completed', val:'—', valN:0, lastRun:'2026-03-26' },
+              { id:'NHL1a5', batch:'PHEPILME617', name:'Enteropathy-associated T-cell lymphoma', parent:'T-lymphoblastic lymphoma/leukemia', status:'review', val:'Review Pending', valN:0, lastRun:'2026-03-26' },
+              { id:'NHL1a6', batch:'PHEPILME613', name:'Monomorphic epitheliotropic intestinal T-cell', parent:'T-lymphoblastic lymphoma/leukemia', status:'completed', val:'—', valN:0, lastRun:'2026-03-26' },
+            ]
+          },
+          {
+            id:'NHL1b', batch:'PHEPILME647', name:'Peripheral T-cell lymphomas', parent:'Natural Killer/T-cell lymphomas',
+            status:'completed', val:'less than 15%', valN:10, lastRun:'2026-02-23',
+            deep:[
+              { id:'NHL1b1', batch:'PHEPILME618', name:'Anaplastic large cell lymphoma (ALCL)', parent:'Peripheral T-cell lymphomas', status:'completed', val:'—', valN:0, lastRun:'2026-03-26' },
+              { id:'NHL1b2', batch:'PHEPILME619', name:'Primary cutaneous ALCL', parent:'Peripheral T-cell lymphomas', status:'completed', val:'—', valN:0, lastRun:'2026-03-26' },
+              { id:'NHL1b3', batch:'PHEPILME620', name:'Systemic ALCL', parent:'Peripheral T-cell lymphomas', status:'completed', val:'—', valN:0, lastRun:'2026-03-26' },
+              { id:'NHL1b4', batch:'PHEPILME621', name:'Breast implant-associated ALCL', parent:'Peripheral T-cell lymphomas', status:'completed', val:'—', valN:0, lastRun:'2026-03-26' },
+            ]
+          },
+        ]
+      },
+      {
+        id:'NHL2', batch:'PHEPILME726', name:'B-cell Lymphomas', parent:"Non-Hodgkin's lymphoma",
+        status:'completed', val:'85% (2025)', valN:85, lastRun:'2026-03-25',
+        sats:[
+          { id:'NHL2a', batch:'PHEPILME618b', name:'Lymphoplasmacytic lymphoma', parent:'B-cell Lymphomas', status:'completed', val:'1% to 2%', valN:1.5, lastRun:'2026-03-26', deep:[] },
+          { id:'NHL2b', batch:'PHEPILME619b', name:'Hairy cell leukemia', parent:'B-cell Lymphomas', status:'completed', val:'—', valN:0, lastRun:'2026-03-26', deep:[] },
+          { id:'NHL2c', batch:'PHEPILME620b', name:'Primary CNS lymphoma', parent:'B-cell Lymphomas', status:'completed', val:'1% to 2%', valN:1.5, lastRun:'2026-03-26', deep:[] },
+          { id:'NHL2d', batch:'PHEPILME621b', name:'Primary intraocular lymphoma', parent:'B-cell Lymphomas', status:'completed', val:'—', valN:0, lastRun:'2026-03-26', deep:[] },
+          { id:'NHL2e', batch:'PHEPILME727', name:'Diffuse large B-cell lymphoma', parent:'B-cell Lymphomas', status:'completed', val:'25%–30% (2023)', valN:27, lastRun:'2026-03-25', deep:[] },
+          { id:'NHL2f', batch:'PHEPILME729', name:'Follicular lymphoma', parent:'B-cell Lymphomas', status:'completed', val:'30% (2024)', valN:30, lastRun:'2026-04-03', deep:[] },
+          { id:'NHL2g', batch:'PHEPILME622b', name:'Chronic lymphocytic leukemia (CLL)', parent:'B-cell Lymphomas', status:'completed', val:'—', valN:0, lastRun:'2026-02-23', deep:[] },
+          { id:'NHL2h', batch:'PHEPILME643', name:'Mantle cell lymphoma', parent:'B-cell Lymphomas', status:'completed', val:'5%', valN:5, lastRun:'2026-02-23', deep:[] },
+          { id:'NHL2i', batch:'PHEPILME644', name:'Marginal zone lymphomas', parent:'B-cell Lymphomas', status:'review', val:'Review Pending', valN:0, lastRun:'2026-02-23', deep:[] },
+          { id:'NHL2j', batch:'PHEPILME645', name:'Burkitt lymphoma', parent:'B-cell Lymphomas', status:'completed', val:'1% to 5%', valN:3, lastRun:'2026-02-23', deep:[] },
+        ]
+      }
+    ]
+  }
+};
+
+let currentKey = 'bladder';
+let selectedId = null;
+let vpX=0, vpY=0, vpScale=1;
+let isDragging=false, dragSX=0, dragSY=0;
+
+function badge(status){
+  if(status==='completed') return `<span class="badge badge-completed"><span class="badge-dot"></span>Completed</span>`;
+  if(status==='review')    return `<span class="badge badge-review"><span class="badge-dot"></span>Review Needed</span>`;
+  return `<span class="badge badge-processing"><span class="badge-dot"></span>Processing</span>`;
+}
+
+/* ── LAYOUT: radial hub-spoke supporting L3 deep nodes ── */
+function computeLayout(key){
+  const d = DATA[key];
+  const spokes = d.spokes;
+  const N = spokes.length;
+
+  const HUB_W=214, HUB_H=200;
+  const SPK_W=172, SPK_H=160;
+  const SAT_W=150, SAT_H=120;
+  const L3_W=136,  L3_H=100;
+
+  // Adaptive radii based on max node counts to prevent overlapping
+  let maxM = 0, maxK = 0;
+  spokes.forEach(s => {
+    const M = (s.sats||[]).length;
+    if(M > maxM) maxM = M;
+    (s.sats||[]).forEach(sat => {
+      const K = (sat.deep||[]).length;
+      if(K > maxK) maxK = K;
+    });
+  });
+
+  // Dynamic R1 to space out the spokes
+  let R1_base = 280;
+  if (maxM > 0) R1_base = 320;
+  if (maxK > 0) R1_base = 360;
+  const R1 = Math.max(R1_base, N * 50 + maxM * 20 + maxK * 10);
+
+  const angleStart = -Math.PI/2;
+  const positions = {};
+
+  positions[d.root.id] = {x:0, y:0, w:HUB_W, h:HUB_H};
+
+  spokes.forEach((spk, i)=>{
+    const angle = angleStart + (2*Math.PI * i / N);
+    const sx = Math.round(R1 * Math.cos(angle));
+    const sy = Math.round(R1 * Math.sin(angle));
+    positions[spk.id] = {x:sx, y:sy, w:SPK_W, h:SPK_H};
+
+    const sats = spk.sats || [];
+    const M = sats.length;
+    if(!M) return;
+
+    // Dynamically calculate R2 so satellite nodes don't overlap
+    const fanSpread = Math.min(Math.PI * 0.85, Math.PI * 0.22 * M);
+    const minR2 = M > 1 ? (170 * (M - 1)) / fanSpread : 180;
+    const actualR2 = Math.max(200, minR2);
+
+    sats.forEach((sat, j)=>{
+      const offset = M===1 ? 0 : -fanSpread/2 + fanSpread*j/(M-1);
+      const satAngle = angle + offset;
+      const satX = sx + Math.round(actualR2 * Math.cos(satAngle));
+      const satY = sy + Math.round(actualR2 * Math.sin(satAngle));
+      positions[sat.id] = {x:satX, y:satY, w:SAT_W, h:SAT_H};
+
+      const deeps = sat.deep || [];
+      const K = deeps.length;
+      if(!K) return;
+
+      // Dynamically calculate R3 so deep L3 nodes don't overlap
+      const deepFan = Math.min(Math.PI * 0.75, Math.PI * 0.20 * K);
+      const minR3 = K > 1 ? (150 * (K - 1)) / deepFan : 160;
+      const actualR3 = Math.max(180, minR3);
+
+      deeps.forEach((dp, dk)=>{
+        const dOffset = K===1 ? 0 : -deepFan/2 + deepFan*dk/(K-1);
+        const dAngle = satAngle + dOffset;
+        const dpX = satX + Math.round(actualR3 * Math.cos(dAngle));
+        const dpY = satY + Math.round(actualR3 * Math.sin(dAngle));
+        positions[dp.id] = {x:dpX, y:dpY, w:L3_W, h:L3_H};
+      });
+    });
+  });
+
+  return {positions, HUB_W, HUB_H};
+}
+
+/* ── RENDER ── */
+function render(key){
+  const d = DATA[key];
+  const {positions} = computeLayout(key);
+
+  // Count all nodes
+  let total = 1;
+  d.spokes.forEach(s=>{ total++; (s.sats||[]).forEach(sat=>{ total++; (sat.deep||[]).length && (total+=(sat.deep||[]).length); }); });
+  document.getElementById('recPill').textContent = total + ' Records';
+
+  // Bounding box
+  let minX=Infinity, minY=Infinity, maxX=-Infinity, maxY=-Infinity;
+  Object.values(positions).forEach(p=>{
+    minX=Math.min(minX,p.x-p.w/2); minY=Math.min(minY,p.y-p.h/2);
+    maxX=Math.max(maxX,p.x+p.w/2); maxY=Math.max(maxY,p.y+p.h/2);
+  });
+
+  const nl = document.getElementById('nodesLayer');
+  nl.innerHTML='';
+
+  const PAD=90;
+  const svgW = maxX-minX+PAD*2;
+  const svgH = maxY-minY+PAD*2;
+  const ox=-minX+PAD, oy=-minY+PAD;
+
+  const svg=document.getElementById('connSvg');
+  svg.setAttribute('width', svgW);
+  svg.setAttribute('height', svgH);
+  svg.style.left=(minX-PAD)+'px';
+  svg.style.top=(minY-PAD)+'px';
+  svg.innerHTML='';
+
+  // Connector styles
+  const style=document.createElementNS('http://www.w3.org/2000/svg','style');
+  style.textContent=`
+    @keyframes lineIn{from{stroke-dashoffset:600}to{stroke-dashoffset:0}}
+    .conn1{stroke:#A78BFA;stroke-width:1.8;fill:none;stroke-dasharray:600;stroke-dashoffset:0;animation:lineIn .7s ease both}
+    .conn2{stroke:#C4B5FD;stroke-width:1.2;fill:none;stroke-dasharray:600;stroke-dashoffset:0;stroke-dasharray:4 3;animation:lineIn .7s ease both}
+    .conn3{stroke:#DDD6FE;stroke-width:0.9;fill:none;stroke-dasharray:600;stroke-dashoffset:0;stroke-dasharray:3 3;animation:lineIn .7s ease both}
+    .conn-hub-dot{fill:#5C35C9}
+    .conn-spk-dot{fill:#A78BFA}
+    .conn-sat-dot{fill:#C4B5FD}
+    .conn-l3-dot{fill:#DDD6FE;stroke:#A78BFA;stroke-width:1}
+  `;
+  svg.appendChild(style);
+
+  function svgLine(x1,y1,x2,y2,cls,delay){
+    const el=document.createElementNS('http://www.w3.org/2000/svg','line');
+    el.setAttribute('x1',x1+ox); el.setAttribute('y1',y1+oy);
+    el.setAttribute('x2',x2+ox); el.setAttribute('y2',y2+oy);
+    el.setAttribute('class',cls);
+    el.style.animationDelay=delay+'ms';
+    svg.appendChild(el);
+  }
+  function svgDot(x,y,r,cls,delay){
+    const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('cx',x+ox); c.setAttribute('cy',y+oy);
+    c.setAttribute('r',r); c.setAttribute('class',cls);
+    if(delay) c.style.animationDelay=delay+'ms';
+    svg.appendChild(c);
+  }
+
+  const hub=positions[d.root.id];
+
+  // Hub → Spoke
+  d.spokes.forEach((spk,i)=>{
+    const sp=positions[spk.id];
+    svgLine(hub.x,hub.y,sp.x,sp.y,'conn1',i*50);
+    svgDot(sp.x,sp.y,4,'conn-spk-dot',i*50);
+
+    // Spoke → Sat
+    (spk.sats||[]).forEach((sat,j)=>{
+      const satp=positions[sat.id];
+      svgLine(sp.x,sp.y,satp.x,satp.y,'conn2',i*50+j*35+80);
+      svgDot(satp.x,satp.y,3,'conn-sat-dot');
+
+      // Sat → L3
+      (sat.deep||[]).forEach((dp,dk)=>{
+        const dpp=positions[dp.id];
+        svgLine(satp.x,satp.y,dpp.x,dpp.y,'conn3',i*50+j*35+dk*25+140);
+        svgDot(dpp.x,dpp.y,2.5,'conn-l3-dot');
+      });
+    });
+  });
+
+  // Hub centre dot
+  svgDot(hub.x,hub.y,7,'conn-hub-dot');
+
+  /* ── HUB NODE ── */
+  const isReview = d.root.status==='review';
+  const statCells = [
+    ['WW Prevalence', d.root.ww_prev, d.root.ww_prev_yr],
+    ['WW Incidence',  d.root.ww_inc,  d.root.ww_inc_yr],
+    ['US Prevalence', d.root.us_prev, d.root.us_prev_yr],
+    ['US Incidence',  d.root.us_inc,  d.root.us_inc_yr],
+  ].map(([lbl,val,yr])=>`
+    <div class="stat-cell">
+      <div class="stat-lbl">${lbl}</div>
+      ${isReview
+        ? `<div class="stat-review">⚠ Review</div>`
+        : `<div class="stat-val">${val}<div class="stat-yr">${yr||''}</div></div>`}
+    </div>`).join('');
+
+  createNode(d.root.id, hub.x, hub.y, 0, 0, `
+    <div class="hub-card" onclick="selectNode('${d.root.id}','root')">
+      <div class="hub-top">
+        <div class="hub-batch">${d.root.batch}</div>
+        ${badge(d.root.status)}
+      </div>
+      <div class="hub-name">${d.root.name}</div>
+      <div class="stat-grid">${statCells}</div>
+      <div class="hub-foot">
+        <span class="run-txt">Last run: ${d.root.lastRun}</span>
+      </div>
+    </div>
+    <div class="pulse-ring" style="width:220px;height:205px;animation-delay:.4s"></div>
+    <div class="pulse-ring" style="width:220px;height:205px;animation-delay:1.4s"></div>
+  `);
+
+  /* ── SPOKE NODES (L1) ── */
+  d.spokes.forEach((spk,i)=>{
+    const sp=positions[spk.id];
+    const valHtml = spk.valN>0 || spk.val==='—'
+      ? (spk.valN>0
+          ? `<div class="val-block"><div class="val-lbl">Subtype Value</div><div class="val-num">${spk.val}</div></div>`
+          : `<div class="val-block"><div class="val-lbl">Subtype Value</div><div class="val-num val-dash">—</div></div>`)
+      : `<div class="val-block"><div class="val-lbl">Subtype Value</div><div class="val-num val-dash">—</div></div>`;
+
+    createNode(spk.id, sp.x, sp.y, (i+1)*55, 1, `
+      <div class="spoke-card" onclick="selectNode('${spk.id}','spoke')">
+        <div class="spk-top">
+          <div class="spk-batch">${spk.batch}</div>
+          ${badge(spk.status)}
+        </div>
+        <div class="spk-name">${spk.name}</div>
+        <div class="spk-parent">Part of: ${spk.parent}</div>
+        ${valHtml}
+        <div class="spk-foot"><span class="run-txt">${spk.lastRun}</span></div>
+      </div>
+    `);
+
+    /* ── SAT NODES (L2) ── */
+    (spk.sats||[]).forEach((sat,j)=>{
+      const satp=positions[sat.id];
+      const svHtml = sat.valN>0
+        ? `<div class="sat-val-block"><div class="sat-val-lbl">Subtype Value</div><div class="sat-val-num">${sat.val}</div></div>`
+        : `<div class="sat-val-block"><div class="sat-val-lbl">Subtype Value</div><div class="sat-val-num val-dash" style="opacity:.35">—</div></div>`;
+
+      createNode(sat.id, satp.x, satp.y, (i+1)*55+(j+1)*35, 2, `
+        <div class="sat-card" onclick="selectNode('${sat.id}','satellite')">
+          <div class="sat-batch">${sat.batch}</div>
+          <div class="sat-name">${sat.name}</div>
+          <div class="sat-parent">Part of: ${sat.parent}</div>
+          ${svHtml}
+          <div class="sat-run">${sat.lastRun}</div>
+        </div>
+      `);
+
+      /* ── L3 DEEP NODES ── */
+      (sat.deep||[]).forEach((dp,dk)=>{
+        const dpp=positions[dp.id];
+        const isRev3 = dp.status==='review';
+        const l3Val = isRev3
+          ? `<div class="l3-val-block"><div class="l3-val-lbl">Status</div><div class="l3-val-num" style="font-size:9px;color:var(--amber)">⚠ Review</div></div>`
+          : dp.valN>0
+            ? `<div class="l3-val-block"><div class="l3-val-lbl">Subtype Value</div><div class="l3-val-num">${dp.val}</div></div>`
+            : `<div class="l3-val-block"><div class="l3-val-lbl">Subtype Value</div><div class="l3-val-num val-dash" style="opacity:.35">—</div></div>`;
+
+        createNode(dp.id, dpp.x, dpp.y, (i+1)*55+(j+1)*35+(dk+1)*25, 3, `
+          <div class="l3-card" onclick="selectNode('${dp.id}','deep')">
+            <div class="l3-batch">${dp.batch}</div>
+            <div class="l3-name">${dp.name}</div>
+            <div class="l3-parent">Part of: ${dp.parent}</div>
+            ${l3Val}
+            <div class="l3-run">${dp.lastRun}</div>
+          </div>
+        `);
+      });
+    });
+  });
+
+  // Group labels for bladder
+  if(key==='bladder'){
+    const groups={};
+    d.spokes.forEach(s=>{ if(s.group){ (groups[s.group]||(groups[s.group]=[])).push(s); } });
+    Object.entries(groups).forEach(([gname,members])=>{
+      const xs=members.map(m=>positions[m.id].x);
+      const ys=members.map(m=>positions[m.id].y);
+      const cx2=xs.reduce((a,b)=>a+b,0)/xs.length;
+      const minY2=Math.min(...ys)-105;
+      const gl=document.createElement('div');
+      gl.className='group-label';
+      gl.style.left=cx2+'px'; gl.style.top=minY2+'px';
+      gl.innerHTML=`<div class="group-label-inner">${gname}</div>`;
+      nl.appendChild(gl);
+    });
+  }
+
+  setTimeout(()=>fitToScreen(),50);
+}
+
+function createNode(id,x,y,delay,zBase,html){
+  const nl=document.getElementById('nodesLayer');
+  const el=document.createElement('div');
+  el.className='node';
+  el.id='nd-'+id;
+  el.style.left=x+'px'; el.style.top=y+'px';
+  el.style.zIndex=10+zBase;
+  el.style.animationDelay=delay+'ms';
+  el.innerHTML=html;
+  nl.appendChild(el);
+}
+
+/* ── SELECT / DETAIL PANEL ── */
+function focusNode(el) {
+  const x = parseFloat(el.style.left);
+  const y = parseFloat(el.style.top);
+  
+  const rect = cw.getBoundingClientRect();
+  const targetScale = 1.0; 
+  vpScale = targetScale;
+  vpX = rect.width/2 - (x * vpScale);
+  vpY = rect.height/2 - (y * vpScale);
+  
+  vp.style.transition = 'transform 0.4s cubic-bezier(0.25, 1, 0.5, 1)';
+  updateTransform();
+  setTimeout(() => {
+    vp.style.transition = 'none';
+  }, 400);
+}
+
+function selectNode(id, type){
+  document.querySelectorAll('.node').forEach(n=>n.classList.remove('selected'));
+  if (id) {
+    const el=document.getElementById('nd-'+id);
+    if(el) {
+      el.classList.add('selected');
+      if (document.getElementById('autoFocusToggle').checked) {
+        focusNode(el);
+      }
+    }
+  }
+  selectedId=id;
+  const pi=document.getElementById('panelInner');
+  pi.classList.add('fading');
+  setTimeout(()=>{ fillPanel(id,type); pi.classList.remove('fading'); },160);
+}
+
+function fillPanel(id,type){
+  const d=DATA[currentKey];
+  const pi=document.getElementById('panelInner');
+
+  if(type==='root'){
+    const r=d.root;
+    const isRev=r.status==='review';
+    const sc=(lbl,val,yr)=>`
+      <div class="dp-stat-card">
+        <div class="dp-sc-label">${lbl}</div>
+        ${isRev ? `<div class="dp-sc-review">⚠ Review</div>` : `<div class="dp-sc-value">${val}</div><div class="dp-sc-year">${yr||''}</div>`}
+      </div>`;
+    const childList=d.spokes.map(s=>`
+      <div class="child-row" onclick="selectNode('${s.id}','spoke')">
+        <div class="child-dot"></div>
+        <span class="child-name">${s.name}</span>
+        <span class="child-val">${s.val}</span>
+      </div>`).join('');
+    pi.innerHTML=`
+      <div class="dp-header">
+        <div class="dp-eyebrow">Hub · Level 0</div>
+        <div class="dp-title">${r.name}</div>
+        <div class="dp-meta">${badge(r.status)}</div>
+        <div class="dp-batch">${r.batch}</div>
+      </div>
+      <div class="dp-body">
+        <div class="dp-section">
+          <div class="dp-sec-title">Epidemiological Statistics</div>
+          <div class="dp-stat-grid">${sc('WW Prevalence',r.ww_prev,r.ww_prev_yr)}${sc('WW Incidence',r.ww_inc,r.ww_inc_yr)}${sc('US Prevalence',r.us_prev,r.ww_prev_yr)}${sc('US Incidence',r.us_inc,r.us_inc_yr)}</div>
+        </div>
+        <div class="dp-section">
+          <div class="dp-sec-title">Direct Subtypes</div>
+          <div class="child-list">${childList}</div>
+        </div>
+      </div>
+      <div class="dp-footer">
+        <button class="btn btn-secondary">Export Details</button>
+        <button class="btn btn-primary">Open Full Record</button>
+      </div>`;
+  } else if(type==='spoke') {
+    let s = null;
+    d.spokes.forEach(spk=>{ if(spk.id===id) s=spk; });
+    if(!s) return;
+    const childList=(s.sats||[]).map(sat=>`
+      <div class="child-row" onclick="selectNode('${sat.id}','satellite')">
+        <div class="child-dot"></div>
+        <span class="child-name">${sat.name}</span>
+        <span class="child-val">${sat.val}</span>
+      </div>`).join('');
+    pi.innerHTML=`
+      <div class="dp-header">
+        <div class="dp-eyebrow">Spoke · Level 1</div>
+        <div class="dp-title">${s.name}</div>
+        <div class="dp-meta">${badge(s.status)}</div>
+        <div class="dp-batch">${s.batch}</div>
+      </div>
+      <div class="dp-body">
+        <div class="dp-section">
+          <div class="dp-sec-title">Hierarchy</div>
+          <div class="dp-meta-row" style="margin-bottom:6px">
+            <span class="dp-meta-k">Parent Node</span>
+            <span class="dp-meta-v">${s.parent}</span>
+          </div>
+          <div class="dp-meta-row">
+            <span class="dp-meta-k">Subtype Value</span>
+            <span class="dp-meta-v" style="color:var(--accent);font-size:14px;font-weight:700">${s.val}</span>
+          </div>
+        </div>
+        ${s.sats && s.sats.length ? `
+        <div class="dp-section">
+          <div class="dp-sec-title">Sub-subtypes</div>
+          <div class="child-list">${childList}</div>
+        </div>` : ''}
+      </div>
+      <div class="dp-footer">
+        <button class="btn btn-secondary">Export Details</button>
+        <button class="btn btn-primary">Open Full Record</button>
+      </div>`;
+  } else if(type==='satellite') {
+    let sat = null, parentSpoke = null;
+    d.spokes.forEach(spk=>{ 
+      (spk.sats||[]).forEach(s=>{ if(s.id===id){ sat=s; parentSpoke=spk; } }); 
+    });
+    if(!sat) return;
+    const childList=(sat.deep||[]).map(dp=>`
+      <div class="child-row" onclick="selectNode('${dp.id}','deep')">
+        <div class="child-dot"></div>
+        <span class="child-name">${dp.name}</span>
+        <span class="child-val">${dp.val}</span>
+      </div>`).join('');
+    pi.innerHTML=`
+      <div class="dp-header">
+        <div class="dp-eyebrow">Satellite · Level 2</div>
+        <div class="dp-title">${sat.name}</div>
+        <div class="dp-meta">${badge(sat.status)}</div>
+        <div class="dp-batch">${sat.batch}</div>
+      </div>
+      <div class="dp-body">
+        <div class="dp-section">
+          <div class="dp-sec-title">Hierarchy</div>
+          <div class="dp-meta-row" style="margin-bottom:6px">
+            <span class="dp-meta-k">Parent Node</span>
+            <span class="dp-meta-v">${sat.parent}</span>
+          </div>
+          <div class="dp-meta-row" style="margin-bottom:6px">
+            <span class="dp-meta-k">Root Hub</span>
+            <span class="dp-meta-v">${parentSpoke.parent}</span>
+          </div>
+          <div class="dp-meta-row">
+            <span class="dp-meta-k">Subtype Value</span>
+            <span class="dp-meta-v" style="color:var(--accent);font-size:14px;font-weight:700">${sat.val}</span>
+          </div>
+        </div>
+        ${sat.deep && sat.deep.length ? `
+        <div class="dp-section">
+          <div class="dp-sec-title">Deep Subtypes</div>
+          <div class="child-list">${childList}</div>
+        </div>` : ''}
+      </div>
+      <div class="dp-footer">
+        <button class="btn btn-secondary">Export Details</button>
+        <button class="btn btn-primary">Open Full Record</button>
+      </div>`;
+  } else if(type==='deep') {
+    let dp = null, parentSat = null, parentSpoke = null;
+    d.spokes.forEach(spk=>{ 
+      (spk.sats||[]).forEach(sat=>{ 
+        (sat.deep||[]).forEach(dnode=>{
+          if(dnode.id===id){ dp=dnode; parentSat=sat; parentSpoke=spk; }
+        });
+      }); 
+    });
+    if(!dp) return;
+    pi.innerHTML=`
+      <div class="dp-header">
+        <div class="dp-eyebrow">Deep · Level 3</div>
+        <div class="dp-title">${dp.name}</div>
+        <div class="dp-meta">${badge(dp.status)}</div>
+        <div class="dp-batch">${dp.batch}</div>
+      </div>
+      <div class="dp-body">
+        <div class="dp-section">
+          <div class="dp-sec-title">Hierarchy</div>
+          <div class="dp-meta-row" style="margin-bottom:6px">
+            <span class="dp-meta-k">Parent Node</span>
+            <span class="dp-meta-v">${dp.parent}</span>
+          </div>
+          <div class="dp-meta-row" style="margin-bottom:6px">
+            <span class="dp-meta-k">Grandparent Node</span>
+            <span class="dp-meta-v">${parentSat.parent}</span>
+          </div>
+          <div class="dp-meta-row" style="margin-bottom:6px">
+            <span class="dp-meta-k">Root Hub</span>
+            <span class="dp-meta-v">${parentSpoke.parent}</span>
+          </div>
+          <div class="dp-meta-row">
+            <span class="dp-meta-k">Subtype Value</span>
+            <span class="dp-meta-v" style="color:var(--accent);font-size:14px;font-weight:700">${dp.val}</span>
+          </div>
+        </div>
+      </div>
+      <div class="dp-footer">
+        <button class="btn btn-secondary">Export Details</button>
+        <button class="btn btn-primary">Open Full Record</button>
+      </div>`;
+  }
+}
+
+/* ── INTERACTION (Drag, Zoom) ── */
+const cw=document.getElementById('canvasWrap');
+const vp=document.getElementById('viewport');
+
+cw.addEventListener('mousedown',e=>{
+  if(e.button!==0) return;
+  if(e.target.closest('.node')) return;
+  isDragging=true; dragSX=e.clientX; dragSY=e.clientY;
+});
+window.addEventListener('mousemove',e=>{
+  if(!isDragging) return;
+  vpX += (e.clientX-dragSX); vpY += (e.clientY-dragSY);
+  dragSX=e.clientX; dragSY=e.clientY;
+  updateTransform();
+});
+window.addEventListener('mouseup',()=>{ isDragging=false; });
+window.addEventListener('mouseleave',()=>{ isDragging=false; });
+
+cw.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const scaleChange = Math.exp(-e.deltaY * 0.001);
+  const oldScale = vpScale;
+  let newScale = vpScale * scaleChange;
+  newScale = Math.max(0.1, Math.min(newScale, 3));
+  
+  const rect = cw.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  
+  vpX = mx - (mx - vpX) * (newScale / oldScale);
+  vpY = my - (my - vpY) * (newScale / oldScale);
+  vpScale = newScale;
+  updateTransform();
+}, {passive:false});
+
+function updateTransform(){
+  vp.style.transform=`translate(${vpX}px,${vpY}px) scale(${vpScale})`;
+}
+
+function zoom(factor){
+  const oldScale = vpScale;
+  let newScale = vpScale * factor;
+  newScale = Math.max(0.1, Math.min(newScale, 3));
+  
+  const rect = cw.getBoundingClientRect();
+  const mx = rect.width/2;
+  const my = rect.height/2;
+  
+  vpX = mx - (mx - vpX) * (newScale / oldScale);
+  vpY = my - (my - vpY) * (newScale / oldScale);
+  vpScale = newScale;
+  updateTransform();
+}
+
+function fitToScreen(){
+  const nl = document.getElementById('nodesLayer');
+  if(!nl.children.length) return;
+  let minX=Infinity, minY=Infinity, maxX=-Infinity, maxY=-Infinity;
+  Array.from(nl.children).forEach(n=>{
+    if(!n.classList.contains('node')) return;
+    const x = parseFloat(n.style.left);
+    const y = parseFloat(n.style.top);
+    minX=Math.min(minX, x-100); minY=Math.min(minY, y-100);
+    maxX=Math.max(maxX, x+100); maxY=Math.max(maxY, y+100);
+  });
+  
+  const contentW = maxX - minX;
+  const contentH = maxY - minY;
+  if(contentW<=0 || contentH<=0) return;
+  
+  const rect = cw.getBoundingClientRect();
+  const scaleX = (rect.width - 60) / contentW;
+  const scaleY = (rect.height - 60) / contentH;
+  vpScale = Math.min(scaleX, scaleY, 1);
+  
+  vpX = rect.width/2 - ((minX+maxX)/2 * vpScale);
+  vpY = rect.height/2 - ((minY+maxY)/2 * vpScale);
+  
+  vp.style.transition = 'transform 0.4s cubic-bezier(0.25, 1, 0.5, 1)';
+  updateTransform();
+  setTimeout(() => {
+    vp.style.transition = 'none';
+  }, 400);
+}
+
+function switchCancer(val){
+  currentKey = val;
+  selectNode(null, null);
+  document.getElementById('panelInner').innerHTML = `
+    <div class="dp-empty">
+      <div class="dp-empty-icon">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="#8E96B0" stroke-width="1.4" stroke-linecap="round">
+          <circle cx="11" cy="11" r="3.5"/><circle cx="11" cy="11" r="7.5" stroke-dasharray="2.5 2"/>
+          <circle cx="11" cy="11" r="10" stroke-width=".7" opacity=".4"/>
+        </svg>
+      </div>
+      <div class="dp-empty-title">Select a node</div>
+      <div class="dp-empty-body">Click any cancer type on the diagram to view epidemiological details.</div>
+    </div>`;
+  render(val);
+}
+
+// Init
+window.onload = () => {
+  render('bladder');
+};
+</script>
+</body>
+</html>
